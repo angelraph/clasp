@@ -1,103 +1,61 @@
-import Image from "next/image";
+import Link from "next/link";
+
+const steps = [
+  {
+    title: "Prove you have it",
+    body: "Write a one-time code on paper and photograph it with the item. AI reads the code and records what makes this exact item unique: its serial number if it has one, and its marks.",
+  },
+  {
+    title: "PayPal holds the money",
+    body: "The buyer approves in PayPal. Funds are authorized, not charged. Nobody carries cash and nobody sends first.",
+  },
+  {
+    title: "Money moves when the thing does",
+    body: "At the handoff, the buyer scans the item. If it's the listed item, the seller is paid on the spot. If not, no money moves.",
+  },
+];
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="space-y-8 pt-6">
+      <section>
+        <h1 className="text-4xl font-semibold leading-tight tracking-tight">Pay strangers like you trust them.</h1>
+        <p className="mt-3 text-lg text-ink-500">
+          Buying from someone you met on a marketplace? Renting gear to a stranger? Clasp holds the money with PayPal and
+          releases it only when the item checks out.
+        </p>
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <Link href="/new?mode=sale" className="btn-primary">Sell an item</Link>
+          <Link href="/new?mode=rental" className="btn-secondary">Rent something out</Link>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      <section className="space-y-3">
+        {steps.map((s, i) => (
+          <div key={s.title} className="card flex gap-4">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-clasp-50 font-semibold text-clasp-600">
+              {i + 1}
+            </span>
+            <div>
+              <h2 className="font-semibold">{s.title}</h2>
+              <p className="mt-1 text-sm text-ink-500">{s.body}</p>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="card">
+        <h2 className="font-semibold">Renting? Same engine, two handoffs.</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          The fee and a refundable deposit are held together. The fee is paid at pickup. At return, AI compares the item
+          to its pickup photos, and only damage priced in advance is ever charged. The rest of the deposit goes back
+          automatically.
+        </p>
+      </section>
+
+      <p className="text-center text-xs text-ink-500">
+        Runs on the PayPal sandbox. The AI only reads photos. Plain, published rules decide every payment.
+      </p>
     </div>
   );
 }

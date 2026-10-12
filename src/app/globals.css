@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
+  --color-ink-50: #f6f7f9;
+  --color-ink-100: #eceef2;
+  --color-ink-200: #d9dde5;
+  --color-ink-300: #b6bdcb;
+  --color-ink-500: #6b7385;
+  --color-ink-700: #363c4a;
+  --color-ink-900: #11141b;
+  --color-clasp-50: #eef4ff;
+  --color-clasp-500: #1f6feb;
+  --color-clasp-600: #1a5fd0;
+  --color-ok-50: #ecfdf3;
+  --color-ok-600: #067647;
+  --color-hold-50: #fff8eb;
+  --color-hold-600: #b54708;
+  --color-bad-50: #fef3f2;
+  --color-bad-600: #b42318;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--color-ink-50);
+  color: var(--color-ink-900);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility card {
+  @apply rounded-2xl border border-ink-200 bg-white p-5;
+}
+
+@utility btn {
+  @apply inline-flex w-full items-center justify-center rounded-xl px-4 py-3 font-medium transition disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-ink-900 text-white hover:bg-ink-700;
+}
+@utility btn-secondary {
+  @apply btn border border-ink-300 bg-white text-ink-900 hover:bg-ink-100;
+}
+@utility btn-danger {
+  @apply btn border border-bad-600/30 bg-bad-50 text-bad-600 hover:bg-bad-600/10;
+}
+
+@utility field {
+  @apply w-full rounded-xl border border-ink-300 bg-white px-3 py-2.5 outline-none focus:border-clasp-500 focus:ring-2 focus:ring-clasp-500/20;
+}
+@utility label {
+  @apply mb-1 block text-sm font-medium text-ink-700;
 }

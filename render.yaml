@@ -1,0 +1,37 @@
+# Render Blueprint. Paid plans on purpose: free Postgres is deleted after 30 days and
+# free web services sleep, but judging runs until Dec 15. The hackathon's $50 credit covers this.
+services:
+  - type: web
+    name: clasp
+    runtime: node
+    plan: 0.5c-512mb
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clasp-db
+          property: connectionString
+      - key: PAYPAL_API_BASE
+        value: https://api-m.sandbox.paypal.com
+      - key: PAYPAL_SETTLEMENT
+        value: direct_payee
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-6.1-sol
+      - key: APP_URL
+        sync: false
+
+databases:
+  - name: clasp-db
+    plan: 0.1c-256mb
