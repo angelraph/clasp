@@ -16,7 +16,9 @@ export const env = {
    * platform_payout: the platform is payee and forwards the captured amount with the Payouts API.
    */
   paypalSettlement: () =>
-    (process.env.PAYPAL_SETTLEMENT ?? "direct_payee") as "direct_payee" | "platform_payout",
+    (process.env.PAYPAL_SETTLEMENT ?? "platform_payout") as "direct_payee" | "platform_payout",
+  /** Buyer-paid protection fee in basis points (500 = 5%). Only charged when Clasp is the payee. */
+  claspFeeBps: () => Number(process.env.CLASP_FEE_BPS ?? 500),
   openaiApiKey: () => required("OPENAI_API_KEY"),
   openaiModel: () => process.env.OPENAI_MODEL ?? "gpt-6.1-sol",
   appUrl: () => process.env.APP_URL ?? "http://localhost:3000",

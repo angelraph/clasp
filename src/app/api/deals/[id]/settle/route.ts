@@ -30,7 +30,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
   const authorizationId = deal.authorizationId;
   return withTransition(deal, "returned", "settling", async () => {
     if (totalCents > 0) {
-      await captureForSeller({ deal, listing, amountCents: totalCents, finalCapture: true, purpose: "damages" });
+      await captureForSeller({ deal, listing, captureCents: totalCents, payoutCents: totalCents, finalCapture: true, purpose: "damages" });
     } else {
       await paypal.voidAuthorization(authorizationId, `void-${deal.id}-deposit`);
       await logEvent({ dealId: id, type: "paypal.voided", payload: { reason: "clean return: deposit released" } });

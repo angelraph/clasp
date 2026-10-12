@@ -3,7 +3,7 @@ import { priceRentalReturn } from "@/lib/policy";
 import { getDeal, HttpError, loadPhotos, logEvent, requireRole, savePhotos, updateDeal } from "@/lib/store";
 import { inspectReturn } from "@/lib/vision";
 
-export const maxDuration = 90;
+export const maxDuration = 60;
 
 /** Rental return: the owner scans the item back in; policy prices any agreed damages. */
 export const POST = handler(async (req: Request, { params }: RouteCtx) => {

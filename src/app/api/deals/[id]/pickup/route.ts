@@ -41,7 +41,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
     await logEvent({ dealId: id, type: "rental.pickup_recorded", payload: { reading, presentAtPickup } });
 
     const deal = await ensureFreshHold({ ...current, pickupInspection });
-    await captureForSeller({ deal, listing, amountCents: listing.priceCents, finalCapture: false, purpose: "rental_fee" });
+    await captureForSeller({ deal, listing, captureCents: listing.priceCents + deal.feeCents, payoutCents: listing.priceCents, finalCapture: false, purpose: "rental_fee" });
     await updateDeal(id, { status: "active" });
     return { status: "active", pickupInspection };
   });

@@ -15,10 +15,10 @@ Escrow apps already exist, but in each one a person clicks "received" to release
 ## How it works
 
 ### Sale
-1. **Possession proof.** The seller writes a one-time code on paper and photographs it next to the item, with the serial or IMEI visible. The AI reads the code and the identifier. Code rejects misreads (IMEIs are Luhn-checked) and verifies the listing.
-2. **PayPal hold.** The buyer approves in PayPal. The order uses `intent: AUTHORIZE` with the seller as `payee`. The funds are held, not charged.
+1. **Possession proof.** The seller writes a one-time code on paper and photographs it next to the item. The AI reads the code and records what makes this exact item unique: a serial number or IMEI if it has one (IMEIs are Luhn-checked), otherwise its distinctive marks.
+2. **PayPal hold.** The buyer approves in PayPal. The order uses `intent: AUTHORIZE`, so price plus a small buyer protection fee is held, not charged.
 3. **Handoff scan.** The buyer photographs the item in hand. The model reads identifiers and the Find My screen, **without being told what it should match**. Plain code compares:
-   - Match → `capture` → the seller is paid.
+   - Match → `capture` → Clasp pays the seller their full price with the Payouts API.
    - Mismatch or locked → no capture. The hold stays or is voided.
 
 ### Rental
@@ -35,12 +35,12 @@ The model reports. Code decides. The model never sees prices it could change, ne
 | Capability | Where |
 |---|---|
 | JS SDK v6 PayPal button, one-time payment session | `src/components/PayButton.tsx` |
-| Orders v2 `intent: AUTHORIZE`, `payee` | `createAuthorizeOrder` in `src/lib/paypal.ts` |
+| Orders v2 `intent: AUTHORIZE` | `createAuthorizeOrder` in `src/lib/paypal.ts` |
 | Authorize order | `authorizeOrder` |
 | Partial and final captures (`final_capture`) | `captureAuthorization` |
 | Void | `voidAuthorization` |
 | Reauthorize after the 3-day honor period (to day 29) | `reauthorize`, `ensureFreshHold` in `src/lib/store.ts` |
-| Payouts (optional platform settlement mode) | `payout` |
+| Payouts: seller paid the moment the item checks out | `payout`, `captureForSeller` in `src/lib/store.ts` |
 | Webhooks with signature verification | `src/app/api/webhooks/paypal/route.ts` |
 | `PayPal-Request-Id` idempotency on every money movement | `call()` in `src/lib/paypal.ts` |
 

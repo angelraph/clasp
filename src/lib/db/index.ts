@@ -24,6 +24,10 @@ async function connect(): Promise<DB> {
     return db;
   }
 
+  if (process.env.VERCEL) {
+    throw new Error("DATABASE_URL is not set. Connect a Postgres database (e.g. Neon) to this Vercel project.");
+  }
+
   // No DATABASE_URL: embedded Postgres (PGlite) on local disk, so the app runs with zero setup.
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");

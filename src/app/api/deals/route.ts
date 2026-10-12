@@ -2,7 +2,7 @@ import { getDb, schema } from "@/lib/db";
 import { env } from "@/lib/env";
 import { handler } from "@/lib/http";
 import * as paypal from "@/lib/paypal";
-import { getListing, HttpError, logEvent, newId, newKey, updateDeal } from "@/lib/store";
+import { feeFor, getListing, HttpError, logEvent, newId, newKey, updateDeal } from "@/lib/store";
 
 /** Creates a deal and the PayPal order (intent AUTHORIZE) the buyer will approve. */
 export const POST = handler(async (req: Request) => {
@@ -13,11 +13,13 @@ export const POST = handler(async (req: Request) => {
 
   // A rental holds fee + deposit in one authorization: the fee is captured at pickup,
   // damages (if any) at return, and the rest is released.
-  const amountCents = listing.priceCents + listing.depositCents;
+  // The buyer protection fee rides on top of the price; the seller still gets their full price.
+  const feeCents = feeFor(listing.priceCents);
+  const amountCents = listing.priceCents + feeCents + listing.depositCents;
   const id = newId();
   const buyerKey = newKey();
   const db = await getDb();
-  await db.insert(schema.deals).values({ id, listingId, buyerKey, authorizedCents: amountCents });
+  await db.insert(schema.deals).values({ id, listingId, buyerKey, authorizedCents: amountCents, feeCents });
 
   const order = await paypal.createAuthorizeOrder({
     dealId: id,

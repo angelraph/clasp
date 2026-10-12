@@ -18,7 +18,7 @@ services:
       - key: PAYPAL_API_BASE
         value: https://api-m.sandbox.paypal.com
       - key: PAYPAL_SETTLEMENT
-        value: direct_payee
+        value: platform_payout
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
@@ -27,6 +27,8 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: CLASP_FEE_BPS
+        value: "500"
       - key: OPENAI_MODEL
         value: gpt-6.1-sol
       - key: APP_URL

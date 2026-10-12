@@ -10,6 +10,15 @@ export function parseDollarsToCents(input: string): number {
   return Math.round(Number(cleaned) * 100);
 }
 
+/**
+ * Clasp's buyer protection fee: a percentage of the price (never the deposit), minimum $1.
+ * The seller always receives their full asking price.
+ */
+export function protectionFeeCents(priceCents: number, bps: number): number {
+  if (bps <= 0) return 0;
+  return Math.max(100, Math.round((priceCents * bps) / 10_000));
+}
+
 export function formatMoney(cents: number, currency = "USD"): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
 }

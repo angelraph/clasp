@@ -26,7 +26,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
 
   return withTransition(current, "held", "releasing", async () => {
     const deal = await ensureFreshHold(current);
-    const capture = await captureForSeller({ deal, listing, amountCents: listing.priceCents, finalCapture: true, purpose: "sale" });
+    const capture = await captureForSeller({ deal, listing, captureCents: listing.priceCents + deal.feeCents, payoutCents: listing.priceCents, finalCapture: true, purpose: "sale" });
     await updateDeal(id, { status: "released" });
     await updateListing(listing.id, { status: "closed" });
     await logEvent({ dealId: id, type: "deal.released", payload: { captureId: capture.id } });

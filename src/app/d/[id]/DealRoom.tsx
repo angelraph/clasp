@@ -28,6 +28,8 @@ type State = {
     status: string;
     authorizedCents: number;
     capturedCents: number;
+    feeCents: number;
+    paidOutCents: number;
     decision: Decision | null;
     pickupInspection: { presentAtPickup: Record<string, boolean>; conditionNotes: string[] } | null;
     clock: { honorEndsAt: string; expiresAt: string; phase: string } | null;
@@ -176,9 +178,15 @@ export function DealRoom({ id, urlKey }: { id: string; urlKey: string | null }) 
           </div>
           <div className="rounded-xl bg-ink-50 p-3">
             <p className="text-ink-500">Paid to {listing.mode === "sale" ? "seller" : "owner"}</p>
-            <p className="text-lg font-semibold">{formatMoney(deal.capturedCents)}</p>
+            <p className="text-lg font-semibold">{formatMoney(deal.paidOutCents)}</p>
           </div>
         </div>
+        {deal.feeCents > 0 && (
+          <p className="mt-3 text-xs text-ink-500">
+            Includes a {formatMoney(deal.feeCents)} Clasp buyer protection fee, charged only when the deal completes. The{" "}
+            {listing.mode === "sale" ? "seller" : "owner"} receives their full {formatMoney(listing.priceCents)}.
+          </p>
+        )}
         {deal.status === "held" && honorLeft && (
           <p className="mt-3 text-xs text-ink-500">
             PayPal guarantees the hold for {honorLeft === "ended" ? "—" : honorLeft} more; after that Clasp renews it (up to 29 days).

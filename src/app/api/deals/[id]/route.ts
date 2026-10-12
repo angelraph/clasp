@@ -33,6 +33,8 @@ export const GET = handler(async (req: Request, { params }: RouteCtx) => {
       status: deal.status,
       authorizedCents: deal.authorizedCents,
       capturedCents: deal.capturedCents,
+      feeCents: deal.feeCents,
+      paidOutCents: deal.paidOutCents,
       authorizedAt: deal.authorizedAt,
       decision: deal.decision,
       pickupInspection: deal.pickupInspection,

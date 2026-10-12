@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { PayButton } from "@/components/PayButton";
 import { getDb, schema } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
-import { getListing, HttpError, photoIds } from "@/lib/store";
+import { feeFor, getListing, HttpError, photoIds } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +28,7 @@ export default async function ListingPage({
   const isSeller = k === listing.sellerKey;
   const photos = await photoIds({ listingId: id, stage: "listing" });
   const fp = listing.fingerprint;
+  const fee = feeFor(listing.priceCents);
 
   const db = await getDb();
   const deals = isSeller
@@ -107,10 +108,16 @@ export default async function ListingPage({
 
       {!isSeller && listing.status === "verified" && (
         <div className="card space-y-3">
+          <dl className="space-y-1 text-sm">
+            <div className="flex justify-between"><dt className="text-ink-500">{listing.mode === "sale" ? "Price" : "Rental fee"}</dt><dd>{formatMoney(listing.priceCents)}</dd></div>
+            {fee > 0 && <div className="flex justify-between"><dt className="text-ink-500">Clasp buyer protection</dt><dd>{formatMoney(fee)}</dd></div>}
+            {listing.mode === "rental" && <div className="flex justify-between"><dt className="text-ink-500">Refundable deposit</dt><dd>{formatMoney(listing.depositCents)}</dd></div>}
+            <div className="flex justify-between border-t border-ink-100 pt-1 font-semibold"><dt>Held by PayPal</dt><dd>{formatMoney(listing.priceCents + fee + listing.depositCents)}</dd></div>
+          </dl>
           <p className="text-sm text-ink-700">
             {listing.mode === "sale"
-              ? `${formatMoney(listing.priceCents)} is held by PayPal, not charged. The seller is paid only after you scan the item at the handoff and it matches.`
-              : `${formatMoney(listing.priceCents + listing.depositCents)} is held by PayPal. The fee is paid at pickup; the deposit comes back when the item does.`}
+              ? "Held, not charged. The seller is paid only after you scan the item at the handoff and it matches. If it doesn't, nothing is charged."
+              : "The fee is paid at pickup; the deposit comes back when the item does, minus only charges agreed above."}
           </p>
           <PayButton listingId={listing.id} />
         </div>

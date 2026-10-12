@@ -3,6 +3,7 @@ import { customAlphabet } from "nanoid";
 import { getDb, schema } from "./db";
 import type { Deal, Listing } from "./db/schema";
 import { env } from "./env";
+import { protectionFeeCents } from "./money";
 import * as paypal from "./paypal";
 import type { Photo } from "./vision";
 
@@ -169,14 +170,22 @@ export async function ensureFreshHold(deal: Deal): Promise<Deal> {
   return { ...deal, authorizationId: auth.id, authorizedAt };
 }
 
+/** The buyer protection fee for a price. Zero when the seller is the payee, since Clasp couldn't collect it. */
+export function feeFor(priceCents: number): number {
+  return env.paypalSettlement() === "platform_payout" ? protectionFeeCents(priceCents, env.claspFeeBps()) : 0;
+}
+
 /**
- * The only place money is captured. With direct_payee the order already names the
- * seller, so the capture pays them; with platform_payout we forward it by Payouts.
+ * The only place money is captured. With platform_payout, Clasp captures
+ * `captureCents` (which may include its fee) and pays the seller exactly
+ * `payoutCents` by Payouts. With direct_payee the order already names the seller,
+ * so the capture itself pays them.
  */
 export async function captureForSeller(input: {
   deal: Deal;
   listing: Listing;
-  amountCents: number;
+  captureCents: number;
+  payoutCents: number;
   finalCapture: boolean;
   purpose: string;
 }) {
@@ -184,7 +193,7 @@ export async function captureForSeller(input: {
   const requestId = `capture-${input.deal.id}-${input.purpose}`;
   const capture = await paypal.captureAuthorization({
     authorizationId: input.deal.authorizationId,
-    amountCents: input.amountCents,
+    amountCents: input.captureCents,
     currency: input.listing.currency,
     finalCapture: input.finalCapture,
     requestId,
@@ -196,17 +205,26 @@ export async function captureForSeller(input: {
     payload: { purpose: input.purpose, captureId: capture.id, status: capture.status, amount: capture.amount, finalCapture: input.finalCapture },
   });
 
-  if (env.paypalSettlement() === "platform_payout") {
+  const platform = env.paypalSettlement() === "platform_payout";
+  const paidOut = platform ? input.payoutCents : input.captureCents;
+  if (platform && input.payoutCents > 0) {
     const result = await paypal.payout({
       batchId: `payout-${input.deal.id}-${input.purpose}`,
       receiverEmail: input.listing.sellerPaypalEmail,
-      amountCents: input.amountCents,
+      amountCents: input.payoutCents,
       currency: input.listing.currency,
       note: `Payment for ${input.listing.title}, verified by Clasp.`,
     });
-    await logEvent({ dealId: input.deal.id, type: "paypal.payout", payload: result.batch_header });
+    await logEvent({
+      dealId: input.deal.id,
+      type: "paypal.payout",
+      payload: { ...result.batch_header, amount: { value: (input.payoutCents / 100).toFixed(2), currency_code: input.listing.currency } },
+    });
   }
 
-  await updateDeal(input.deal.id, { capturedCents: input.deal.capturedCents + input.amountCents });
+  await updateDeal(input.deal.id, {
+    capturedCents: input.deal.capturedCents + input.captureCents,
+    paidOutCents: input.deal.paidOutCents + paidOut,
+  });
   return capture;
 }
