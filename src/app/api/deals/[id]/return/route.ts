@@ -1,4 +1,5 @@
 import { handler, type RouteCtx } from "@/lib/http";
+import { limitAiCall } from "@/lib/ratelimit";
 import { formatMoney } from "@/lib/money";
 import { notifyLater } from "@/lib/notify";
 import { priceRentalReturn } from "@/lib/policy";
@@ -19,6 +20,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
   const pickup = deal.pickupInspection as { photoIds: string[]; presentAtPickup: Record<string, boolean>; conditionNotes: string[] } | null;
   if (!pickup) throw new HttpError(409, "No pickup record to compare against");
 
+  await limitAiCall(req, `deal:${id}`);
   const { ids, photos } = await savePhotos(form, { listingId: listing.id, dealId: id, stage: "return" });
   const reading = await inspectReturn({
     pickupPhotos: await loadPhotos(pickup.photoIds),

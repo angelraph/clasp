@@ -1,5 +1,6 @@
 import type { Identifier } from "@/lib/db/schema";
 import { handler, type RouteCtx } from "@/lib/http";
+import { limitAiCall } from "@/lib/ratelimit";
 import { notifyLater } from "@/lib/notify";
 import { decideSaleHandoff, type FeatureCheck, type LockStatus } from "@/lib/policy";
 import { getDeal, HttpError, logEvent, requireRole, savePhotos, updateDeal } from "@/lib/store";
@@ -35,6 +36,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
   const fingerprint = listing.fingerprint;
   if (!fingerprint) throw new HttpError(409, "Listing has no verified fingerprint");
 
+  await limitAiCall(req, `deal:${id}`);
   const { ids, photos } = await savePhotos(form, { listingId: listing.id, dealId: id, stage: "handoff" });
   const features = fingerprint.distinctiveFeatures ?? [];
   const reading = await readHandoff(photos, {

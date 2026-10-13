@@ -1,4 +1,7 @@
+import { after } from "next/server";
+import { runMarketCheck } from "@/lib/market";
 import { handler, type RouteCtx } from "@/lib/http";
+import { limitAiCall } from "@/lib/ratelimit";
 import { verifyListing } from "@/lib/policy";
 import { getListing, HttpError, logEvent, markPhotosPublic, savePhotos, updateListing } from "@/lib/store";
 import { inspectListing } from "@/lib/vision";
@@ -12,6 +15,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
   if (form.get("key") !== listing.sellerKey) throw new HttpError(403, "Only the seller can verify this listing");
   if (listing.status !== "draft") throw new HttpError(409, "This listing is already verified");
 
+  await limitAiCall(req, `listing:${id}`);
   const { ids, photos } = await savePhotos(form, { listingId: id, stage: "listing" });
   const reading = await inspectListing(photos, listing.title);
   const verdict = verifyListing({
@@ -51,5 +55,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
         }
       : {}),
   });
+  // Market price check runs after the response so verification stays fast.
+  if (verdict.verified) after(() => runMarketCheck(id).catch((err) => console.error("Market check failed", err)));
   return { verdict, reading };
 });

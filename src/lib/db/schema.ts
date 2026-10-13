@@ -47,6 +47,8 @@ export const listings = pgTable("listings", {
   verification: jsonb("verification").$type<Record<string, unknown> | null>(),
   accessories: jsonb("accessories").$type<Accessory[]>().notNull().default([]),
   damageRules: jsonb("damage_rules").$type<DamageRule[]>().notNull().default([]),
+  // Channel3 market price check, filled in shortly after verification.
+  market: jsonb("market").$type<Record<string, unknown> | null>(),
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -86,6 +88,13 @@ export const photos = pgTable("photos", {
   mime: text("mime").notNull(),
   data: bytea("data").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Fixed-window counters that cap expensive actions (AI calls, PayPal orders) per caller. */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  count: integer("count").notNull(),
 });
 
 /** Browser push subscriptions, scoped to the listing (seller) or deal (buyer) they follow. */

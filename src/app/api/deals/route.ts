@@ -1,6 +1,7 @@
 import { getDb, schema } from "@/lib/db";
 import { env } from "@/lib/env";
 import { handler } from "@/lib/http";
+import { clientIp, rateLimit } from "@/lib/ratelimit";
 import * as paypal from "@/lib/paypal";
 import { feeFor, getListing, HttpError, logEvent, newId, newKey, updateDeal } from "@/lib/store";
 
@@ -8,6 +9,7 @@ import { feeFor, getListing, HttpError, logEvent, newId, newKey, updateDeal } fr
 export const POST = handler(async (req: Request) => {
   const { listingId } = (await req.json()) as { listingId?: string };
   if (!listingId) throw new HttpError(400, "listingId is required");
+  await rateLimit(`deals:ip:${clientIp(req)}`, 30, 3600);
   const listing = await getListing(listingId);
   if (listing.status !== "verified") throw new HttpError(409, "This item isn't available");
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getDb, schema } from "@/lib/db";
 import { handler } from "@/lib/http";
+import { clientIp, rateLimit } from "@/lib/ratelimit";
 import { newPossessionCode } from "@/lib/policy";
 import { HttpError, logEvent, newId, newKey } from "@/lib/store";
 
@@ -24,6 +25,7 @@ const body = z
 export const POST = handler(async (req: Request) => {
   const parsed = body.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.issues.map((i) => i.message).join("; "));
+  await rateLimit(`listings:ip:${clientIp(req)}`, 20, 3600);
   const input = parsed.data;
 
   const id = newId();

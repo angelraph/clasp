@@ -5,6 +5,7 @@ import {
   isValidImei,
   newPossessionCode,
   priceRentalReturn,
+  priceSignal,
   verifyListing,
 } from "./policy";
 
@@ -177,6 +178,27 @@ describe("priceRentalReturn", () => {
     expect(v.charges).toHaveLength(2);
     expect(v.totalCents).toBe(5000);
     expect(v.releasedCents).toBe(0);
+  });
+});
+
+describe("priceSignal", () => {
+  const newOffers = [80000, 82000, 79900, 85000];
+  it("flags far-below-market prices", () => {
+    expect(priceSignal({ askingCents: 15000, newOfferCents: newOffers, usedOfferCents: [] }).level).toBe("too_low");
+  });
+  it("calls a normal second-hand price fair", () => {
+    expect(priceSignal({ askingCents: 45000, newOfferCents: newOffers, usedOfferCents: [] }).level).toBe("fair");
+  });
+  it("prefers used offers as the reference when there are enough", () => {
+    const s = priceSignal({ askingCents: 40000, newOfferCents: newOffers, usedOfferCents: [42000, 45000, 39000] });
+    expect(s.referenceKind).toBe("used");
+    expect(s.level).toBe("fair");
+  });
+  it("warns when priced above new", () => {
+    expect(priceSignal({ askingCents: 95000, newOfferCents: newOffers, usedOfferCents: [] }).level).toBe("above_new");
+  });
+  it("says unknown with no data instead of guessing", () => {
+    expect(priceSignal({ askingCents: 1000, newOfferCents: [], usedOfferCents: [] }).level).toBe("unknown");
   });
 });
 

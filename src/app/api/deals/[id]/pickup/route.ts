@@ -1,4 +1,5 @@
 import { handler, type RouteCtx } from "@/lib/http";
+import { limitAiCall } from "@/lib/ratelimit";
 import { formatMoney } from "@/lib/money";
 import { notifyLater } from "@/lib/notify";
 import { MIN_READ_CONFIDENCE } from "@/lib/policy";
@@ -28,6 +29,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
   requireRole(current, listing, form.get("key") as string, "buyer");
   if (listing.mode !== "rental" || current.status !== "held") throw new HttpError(409, `Deal is ${current.status}`);
 
+  await limitAiCall(req, `deal:${id}`);
   return withTransition(current, "held", "picking_up", async () => {
     const { ids, photos } = await savePhotos(form, { listingId: listing.id, dealId: id, stage: "pickup" });
     const reading = await inspectPickup(photos, listing.accessories.map((a) => a.name));

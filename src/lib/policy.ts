@@ -290,6 +290,52 @@ export function priceRentalReturn(input: {
   };
 }
 
+// ---------------------------------------------------------------- market price
+
+export type PriceSignal = {
+  level: "too_low" | "low" | "fair" | "above_new" | "unknown";
+  referenceCents: number | null;
+  referenceKind: "used" | "new" | null;
+  percentOfReference: number | null;
+  message: string;
+};
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+}
+
+/**
+ * Compares an asking price to live retail offers. Used offers are the better reference
+ * for second-hand goods; with fewer than 3, used prices are estimated from new ones.
+ */
+export function priceSignal(input: { askingCents: number; newOfferCents: number[]; usedOfferCents: number[] }): PriceSignal {
+  const newMedian = median(input.newOfferCents);
+  const usedMedian = input.usedOfferCents.length >= 3 ? median(input.usedOfferCents) : null;
+  if (newMedian === null && usedMedian === null) {
+    return { level: "unknown", referenceCents: null, referenceKind: null, percentOfReference: null, message: "No comparable retail prices found." };
+  }
+  const referenceKind = usedMedian !== null ? "used" : "new";
+  const referenceCents = (usedMedian ?? newMedian)!;
+  const pct = Math.round((input.askingCents / referenceCents) * 100);
+
+  if (newMedian !== null && input.askingCents > newMedian * 1.05) {
+    return { level: "above_new", referenceCents: newMedian, referenceKind: "new", percentOfReference: Math.round((input.askingCents / newMedian) * 100), message: "Priced above what it costs new. Worth comparing before you buy." };
+  }
+  // Second-hand goods typically sell at 40-80% of new. Far below that is the classic scam bait.
+  const floor = referenceKind === "used" ? 0.5 : 0.3;
+  const low = referenceKind === "used" ? 0.75 : 0.45;
+  if (input.askingCents < referenceCents * floor) {
+    return { level: "too_low", referenceCents, referenceKind, percentOfReference: pct, message: "Far below the going rate. Scams often look like this, which is why Clasp holds the money until you check the item." };
+  }
+  if (input.askingCents < referenceCents * low) {
+    return { level: "low", referenceCents, referenceKind, percentOfReference: pct, message: "A good deal compared with the market. Check the condition carefully at the handoff." };
+  }
+  return { level: "fair", referenceCents, referenceKind, percentOfReference: pct, message: "In line with the market." };
+}
+
 // ---------------------------------------------------------------- hold clock
 
 export function holdClock(authorizedAt: Date, now: Date = new Date()) {

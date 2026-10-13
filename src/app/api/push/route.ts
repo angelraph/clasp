@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getDb, schema } from "@/lib/db";
 import { handler } from "@/lib/http";
+import { clientIp, rateLimit } from "@/lib/ratelimit";
 import { getDeal, getListing, HttpError, roleFor } from "@/lib/store";
 
 const body = z.object({
@@ -23,6 +24,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = body.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, "Invalid subscription");
   const { key, listingId, dealId, subscription } = parsed.data;
+  await rateLimit(`push:ip:${clientIp(req)}`, 30, 3600);
 
   let role: "seller" | "buyer";
   let resolvedListingId: string;

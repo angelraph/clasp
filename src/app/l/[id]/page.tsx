@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { MarketCard } from "@/components/MarketCard";
 import { NotifyButton } from "@/components/NotifyButton";
 import { PayButton } from "@/components/PayButton";
+import type { MarketCheck } from "@/lib/channel3";
 import { getDb, schema } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { feeFor, getListing, HttpError, photoIds } from "@/lib/store";
@@ -105,6 +107,10 @@ export default async function ListingPage({
         </div>
       ) : (
         <div className="card border-hold-600/30 bg-hold-50 text-sm text-hold-600">This listing hasn&apos;t been verified yet.</div>
+      )}
+
+      {listing.market && listing.mode === "sale" && (
+        <MarketCard market={listing.market as unknown as MarketCheck} askingCents={listing.priceCents} isSeller={isSeller} />
       )}
 
       {listing.mode === "rental" && (
