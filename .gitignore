@@ -43,3 +43,8 @@ next-env.d.ts
 
 # local embedded database
 /.data/
+
+# local tooling installed by integrations
+/.agents/
+/.claude/
+skills-lock.json
