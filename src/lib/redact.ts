@@ -6,7 +6,7 @@
  */
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
-import sharp from "sharp";
+import sharp, { type OverlayOptions } from "sharp";
 import { z } from "zod";
 import { env } from "./env";
 
@@ -55,7 +55,7 @@ export async function pixelate(data: Uint8Array, regions: Region[]): Promise<Uin
   const { data: oriented, info } = await base.toBuffer({ resolveWithObject: true });
   const W = info.width;
   const H = info.height;
-  const overlays: sharp.OverlayOptions[] = [];
+  const overlays: OverlayOptions[] = [];
   for (const r of regions) {
     const padX = 0.02 * W;
     const padY = 0.015 * H;
