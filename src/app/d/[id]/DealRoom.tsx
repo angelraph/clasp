@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PhotoPicker } from "@/components/PhotoPicker";
+import { ShareProof } from "@/components/ShareProof";
 import { formatMoney } from "@/lib/money";
 
 type Charge = { reason: string; amountCents: number; evidencePhotoId: string | null };
@@ -59,7 +60,10 @@ function eventLabel(e: State["events"][number]): string {
     "paypal.authorized": `PayPal hold placed${amt}`,
     "paypal.reauthorized": "Hold renewed with PayPal",
     "paypal.capture": `PayPal captured${amt} (${String(p.purpose ?? "").replace("_", " ")})`,
-    "paypal.payout": "Payout sent to seller",
+    "paypal.payout": `Payout sent to seller${amt}`,
+    "dispute.seen": `Buyer opened a PayPal dispute (${p.disputeId ?? ""})`,
+    "dispute.evidence_submitted": "Clasp sent the handoff record to PayPal as evidence",
+    "dispute.defense_failed": "Couldn't send evidence automatically. Use “Send record to PayPal”",
     "paypal.voided": "PayPal hold cancelled, money released",
     "handoff.match": "Handoff scan: identity matches",
     "handoff.mismatch": "Handoff scan: NOT the listed item",
@@ -71,7 +75,27 @@ function eventLabel(e: State["events"][number]): string {
     "deal.released": "Deal complete",
     "deal.settled": "Rental settled",
   };
-  if (e.type.startsWith("webhook.")) return `PayPal confirmed: ${e.type.slice(8)}${amt}`;
+  const webhook: Record<string, string> = {
+    "CHECKOUT.ORDER.APPROVED": "buyer approved the payment",
+    "PAYMENT.AUTHORIZATION.CREATED": "funds are on hold",
+    "PAYMENT.AUTHORIZATION.VOIDED": "hold released",
+    "PAYMENT.CAPTURE.COMPLETED": "payment captured",
+    "PAYMENT.CAPTURE.PENDING": "capture pending",
+    "PAYMENT.CAPTURE.DECLINED": "capture declined",
+    "PAYMENT.CAPTURE.REFUNDED": "payment refunded",
+    "PAYMENT.CAPTURE.REVERSED": "payment reversed",
+    "PAYMENT.PAYOUTSBATCH.SUCCESS": "payout batch processed",
+    "PAYMENT.PAYOUTS-ITEM.SUCCEEDED": "seller received the payout",
+    "PAYMENT.PAYOUTS-ITEM.UNCLAIMED": "payout waiting to be claimed",
+    "PAYMENT.PAYOUTS-ITEM.FAILED": "payout failed",
+    "CUSTOMER.DISPUTE.CREATED": "dispute opened",
+    "CUSTOMER.DISPUTE.UPDATED": "dispute updated",
+    "CUSTOMER.DISPUTE.RESOLVED": "dispute resolved",
+  };
+  if (e.type.startsWith("webhook.")) {
+    const name = e.type.slice(8);
+    return `PayPal confirmed: ${webhook[name] ?? name}${amt}`;
+  }
   return map[e.type] ?? e.type;
 }
 
@@ -94,6 +118,7 @@ export function DealRoom({ id, urlKey }: { id: string; urlKey: string | null }) 
   const [photos, setPhotos] = useState<File[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (urlKey) return;
@@ -119,6 +144,7 @@ export function DealRoom({ id, urlKey }: { id: string; urlKey: string | null }) 
 
   async function act(path: string, label: string, withPhotos = false) {
     setError(null);
+    setNotice(null);
     setBusy(label);
     try {
       let res: Response;
@@ -137,6 +163,14 @@ export function DealRoom({ id, urlKey }: { id: string; urlKey: string | null }) 
       const data = await res.json();
       if (!res.ok) throw new Error(data.paypalDebugId ? `${data.error} · PayPal debug id ${data.paypalDebugId}` : data.error);
       setPhotos([]);
+      if (path === "defend") {
+        const results = (data.results ?? []) as { outcome: string; disputeId: string }[];
+        setNotice(
+          results.length === 0
+            ? "No PayPal disputes on this deal."
+            : results.map((r) => (r.outcome === "submitted" ? `Record sent to PayPal for dispute ${r.disputeId}.` : r.outcome === "already_submitted" ? `Record already sent for dispute ${r.disputeId}.` : `Dispute ${r.disputeId} found; PayPal isn't asking for evidence yet.`)).join(" "),
+        );
+      }
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -210,7 +244,7 @@ export function DealRoom({ id, urlKey }: { id: string; urlKey: string | null }) 
           <div className="mt-3 flex gap-2">
             {decision.photoIds.map((p) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={p} src={`/api/photos/${p}`} alt="Handoff scan" className="h-20 w-20 rounded-lg object-cover" />
+              <img key={p} src={`/api/photos/${p}?k=${encodeURIComponent(key ?? "")}`} alt="Handoff scan" className="h-20 w-20 rounded-lg object-cover" />
             ))}
           </div>
           {decision.verdict !== "match" && <p className="mt-2 text-sm">No money has moved. The hold stays until you rescan or cancel.</p>}
@@ -227,7 +261,7 @@ export function DealRoom({ id, urlKey }: { id: string; urlKey: string | null }) 
                   <span className="flex items-center gap-2">
                     {c.evidencePhotoId && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={`/api/photos/${c.evidencePhotoId}`} alt="" className="h-10 w-10 rounded object-cover" />
+                      <img src={`/api/photos/${c.evidencePhotoId}?k=${encodeURIComponent(key ?? "")}`} alt="" className="h-10 w-10 rounded object-cover" />
                     )}
                     {c.reason}
                   </span>
@@ -314,12 +348,36 @@ export function DealRoom({ id, urlKey }: { id: string; urlKey: string | null }) 
       )}
 
       {(deal.status === "released" || deal.status === "settled") && (
-        <div className="card text-center">
+        <div className="card space-y-3 text-center">
           <p className="text-lg font-semibold">Done. Nobody had to trust anybody.</p>
-          <Link href="/new" className="btn-primary mt-3">Sell or rent something with Clasp</Link>
+          <p className="text-sm text-ink-500">
+            {role === "seller"
+              ? "Share your proof. It's how buyers know you're the real deal next time."
+              : "Share the proof, or use Clasp for your next deal."}
+          </p>
+          <ShareProof dealId={id} title={listing.title} />
+          <Link href="/new" className="btn-secondary">Sell or rent something with Clasp</Link>
         </div>
       )}
 
+      {role && deal.capturedCents > 0 && (
+        <div className="card space-y-2 text-sm">
+          <h2 className="font-semibold">Your record</h2>
+          <p className="text-ink-500">
+            Photos, match results and the PayPal timeline in one PDF. If the buyer ever opens a PayPal dispute, Clasp sends it to PayPal automatically.
+          </p>
+          <a className="btn-secondary" href={`/api/deals/${id}/record?k=${encodeURIComponent(key ?? "")}`} target="_blank" rel="noreferrer">
+            Download handoff record (PDF)
+          </a>
+          {role === "seller" && (
+            <button className="btn-secondary" disabled={!!busy} onClick={() => act("defend", "defend")}>
+              {busy === "defend" ? "Checking PayPal for disputes…" : "Check for disputes and send record to PayPal"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {notice && <p className="text-sm text-ok-600">{notice}</p>}
       {error && <p className="text-sm text-bad-600">{error}</p>}
 
       <div className="card">

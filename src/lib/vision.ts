@@ -73,6 +73,19 @@ const listingSchema = z.object({
     .describe("True only if this kind of item has an owner-account anti-theft lock (e.g. smartphones, tablets, some laptops and watches)"),
   batteryHealthPercent: z.number().nullable().describe("Only if a battery health screen is visible"),
   conditionNotes: z.array(z.string()).describe("Specific visible wear: scratches, dents, cracks, with location"),
+  photos: z
+    .array(
+      z.object({
+        photoIndex: z.number().int(),
+        showsItem: z.boolean().describe("The physical item itself is clearly visible (not just a screen or a document)"),
+        sensitive: z
+          .boolean()
+          .describe(
+            "True if the photo shows ANY of: a serial number, IMEI or other identifier; a phone number, name, address, email, account or payment detail; a face; a document; a screenshot or settings screen; notifications or messages. When unsure, true.",
+          ),
+      }),
+    )
+    .describe("One entry per photo, deciding which photos are safe to show publicly"),
 });
 export type ListingReading = z.infer<typeof listingSchema>;
 

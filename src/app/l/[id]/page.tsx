@@ -1,4 +1,5 @@
 import { desc, eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PayButton } from "@/components/PayButton";
@@ -7,6 +8,18 @@ import { formatMoney } from "@/lib/money";
 import { feeFor, getListing, HttpError, photoIds } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const listing = await getListing(id).catch(() => null);
+  if (!listing) return { title: "Clasp" };
+  const title = `${listing.title} · ${formatMoney(listing.priceCents)}${listing.mode === "rental" ? " rental" : ""}`;
+  const description =
+    listing.mode === "sale"
+      ? "Verified in the seller's hands. Pay into a PayPal hold; the seller is paid only when you check the item at the handoff."
+      : "Verified by photo. Fee and deposit held by PayPal; the deposit comes back when the item does.";
+  return { title, description, openGraph: { title, description, type: "website" } };
+}
 
 function mask(value: string) {
   return value.length <= 4 ? value : `•••• ${value.slice(-4)}`;
@@ -26,7 +39,8 @@ export default async function ListingPage({
     throw e;
   });
   const isSeller = k === listing.sellerKey;
-  const photos = await photoIds({ listingId: id, stage: "listing" });
+  // Buyers see only photos judged free of identifiers; the seller sees everything they uploaded.
+  const photos = await photoIds({ listingId: id, stage: "listing", publicOnly: !isSeller });
   const fp = listing.fingerprint;
   const fee = feeFor(listing.priceCents);
 
@@ -42,7 +56,7 @@ export default async function ListingPage({
         <div className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4">
           {photos.map((p) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={p} src={`/api/photos/${p}`} alt="" className="h-64 w-auto snap-start rounded-2xl object-cover" />
+            <img key={p} src={`/api/photos/${p}${isSeller ? `?k=${encodeURIComponent(k ?? "")}` : ""}`} alt="" className="h-64 w-auto snap-start rounded-2xl object-cover" />
           ))}
         </div>
       )}

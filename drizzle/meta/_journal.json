@@ -15,6 +15,13 @@
       "when": 1791845924146,
       "tag": "0001_protection_fee",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791861073707,
+      "tag": "0002_photo_visibility",
+      "breakpoints": true
     }
   ]
 }

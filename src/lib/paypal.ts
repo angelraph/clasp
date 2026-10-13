@@ -196,6 +196,58 @@ export async function payout(input: {
   });
 }
 
+export type Dispute = {
+  dispute_id: string;
+  status: string;
+  reason?: string;
+  dispute_life_cycle_stage?: string;
+  disputed_transactions?: { seller_transaction_id?: string; buyer_transaction_id?: string }[];
+  evidences?: { evidence_type?: string; source?: string }[];
+  seller_response_due_date?: string;
+  links?: Link[];
+};
+
+export async function getDispute(disputeId: string): Promise<Dispute> {
+  return call<Dispute>("GET", `/v1/customer/disputes/${encodeURIComponent(disputeId)}`);
+}
+
+export async function listDisputesForTransaction(transactionId: string): Promise<Dispute[]> {
+  const res = await call<{ items?: Dispute[] }>(
+    "GET",
+    `/v1/customer/disputes?disputed_transaction_id=${encodeURIComponent(transactionId)}`,
+  );
+  return res.items ?? [];
+}
+
+/**
+ * Multipart, as in PayPal's sample: an `input` JSON part describing the evidence and a
+ * file part with the document.
+ */
+export async function provideDisputeEvidence(input: {
+  disputeId: string;
+  evidenceType: string;
+  notes: string;
+  file: { name: string; mime: string; data: Uint8Array };
+}): Promise<void> {
+  const form = new FormData();
+  form.append(
+    "input",
+    new Blob(
+      [JSON.stringify({ evidences: [{ evidence_type: input.evidenceType, notes: input.notes.slice(0, 2000) }] })],
+      { type: "application/json" },
+    ),
+  );
+  form.append("evidence-file", new Blob([Buffer.from(input.file.data)], { type: input.file.mime }), input.file.name);
+  const res = await fetch(
+    `${env.paypalApiBase()}/v1/customer/disputes/${encodeURIComponent(input.disputeId)}/provide-evidence`,
+    { method: "POST", headers: { Authorization: `Bearer ${await accessToken()}` }, body: form, cache: "no-store" },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new PayPalError(res.status, text ? JSON.parse(text) : {}, res.headers.get("paypal-debug-id"));
+  }
+}
+
 export async function verifyWebhookSignature(headers: Headers, rawBody: string): Promise<boolean> {
   const webhookId = env.paypalWebhookId();
   if (!webhookId) return false;

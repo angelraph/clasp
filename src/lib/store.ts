@@ -121,7 +121,18 @@ export async function savePhotos(
   return { ids, photos };
 }
 
-export async function photoIds(filter: { listingId: string; dealId?: string; stage: string }): Promise<string[]> {
+export async function markPhotosPublic(ids: string[]) {
+  if (ids.length === 0) return;
+  const db = await getDb();
+  await db.update(schema.photos).set({ isPublic: true }).where(inArray(schema.photos.id, ids));
+}
+
+export async function photoIds(filter: {
+  listingId: string;
+  dealId?: string;
+  stage: string;
+  publicOnly?: boolean;
+}): Promise<string[]> {
   const db = await getDb();
   const rows = await db
     .select({ id: schema.photos.id })
@@ -131,6 +142,7 @@ export async function photoIds(filter: { listingId: string; dealId?: string; sta
         eq(schema.photos.listingId, filter.listingId),
         eq(schema.photos.stage, filter.stage),
         ...(filter.dealId ? [eq(schema.photos.dealId, filter.dealId)] : []),
+        ...(filter.publicOnly ? [eq(schema.photos.isPublic, true)] : []),
       ),
     )
     .orderBy(asc(schema.photos.createdAt));

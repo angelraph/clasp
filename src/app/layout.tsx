@@ -6,7 +6,15 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
+const siteUrl =
+  process.env.APP_URL && !process.env.APP_URL.includes("localhost")
+    ? process.env.APP_URL
+    : process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Clasp: pay strangers like you trust them",
   description:
     "PayPal holds the money. AI checks the item at the handoff. Money moves only when the thing does.",

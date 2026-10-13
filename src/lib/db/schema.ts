@@ -1,4 +1,4 @@
-import { customType, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, customType, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   dataType: () => "bytea",
@@ -77,6 +77,8 @@ export const photos = pgTable("photos", {
   dealId: text("deal_id").references(() => deals.id),
   // listing | handoff | pickup | return
   stage: text("stage").notNull(),
+  // Only photos the model judged free of identifiers and personal data are ever public.
+  isPublic: boolean("is_public").notNull().default(false),
   mime: text("mime").notNull(),
   data: bytea("data").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
