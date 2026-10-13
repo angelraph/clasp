@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.9",
+    "@modelcontextprotocol/server": "^2.3.1",
     "drizzle-orm": "^0.45.4",
+    "mcp-handler": "^2.3.0",
     "nanoid": "^6.0.2",
     "next": "15.5.27",
     "openai": "^7.32.0",

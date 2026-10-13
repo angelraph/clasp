@@ -1,0 +1,1 @@
+ALTER TABLE "listings" ADD COLUMN "location" text DEFAULT '' NOT NULL;

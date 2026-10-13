@@ -44,6 +44,7 @@ export function NewListing({ initialMode }: { initialMode: Mode }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
   const [price, setPrice] = useState("");
   const [deposit, setDeposit] = useState("");
   const [sellerName, setSellerName] = useState("");
@@ -73,6 +74,7 @@ export function NewListing({ initialMode }: { initialMode: Mode }) {
           mode,
           title,
           description,
+          location,
           priceCents: parseDollarsToCents(price),
           depositCents: mode === "rental" ? parseDollarsToCents(deposit) : 0,
           sellerName,
@@ -189,6 +191,10 @@ export function NewListing({ initialMode }: { initialMode: Mode }) {
         <div>
           <label className="label" htmlFor="desc">Details</label>
           <textarea id="desc" className="field" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+        </div>
+        <div>
+          <label className="label" htmlFor="location">Where to meet</label>
+          <input id="location" className="field" required minLength={2} placeholder="City and area, e.g. Lagos, Ikeja" value={location} onChange={(e) => setLocation(e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

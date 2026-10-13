@@ -68,7 +68,7 @@ export default async function ListingPage({
       <div className="card">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm text-ink-500">{listing.mode === "sale" ? "For sale" : "For rent"} · {listing.sellerName}</p>
+            <p className="text-sm text-ink-500">{listing.mode === "sale" ? "For sale" : "For rent"} · {listing.sellerName}{listing.location ? ` · ${listing.location}` : ""}</p>
             <h1 className="mt-0.5 text-2xl font-semibold">{listing.title}</h1>
           </div>
           <div className="text-right">

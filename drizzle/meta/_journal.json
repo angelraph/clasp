@@ -43,6 +43,13 @@
       "when": 1791861758554,
       "tag": "0005_rate_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791861926001,
+      "tag": "0006_listing_location",
+      "breakpoints": true
     }
   ]
 }

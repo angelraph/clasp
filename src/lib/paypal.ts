@@ -83,6 +83,9 @@ export async function createAuthorizeOrder(input: {
   currency: string;
   description: string;
   payeeEmail: string | null;
+  /** For approval on PayPal's own page (redirect flow) instead of the in-page popup. */
+  returnUrl?: string;
+  cancelUrl?: string;
 }): Promise<Order> {
   return call<Order>("POST", "/v2/checkout/orders", {
     requestId: `order-${input.dealId}`,
@@ -103,6 +106,7 @@ export async function createAuthorizeOrder(input: {
             brand_name: "Clasp",
             shipping_preference: "NO_SHIPPING",
             user_action: "PAY_NOW",
+            ...(input.returnUrl ? { return_url: input.returnUrl, cancel_url: input.cancelUrl } : {}),
           },
         },
       },

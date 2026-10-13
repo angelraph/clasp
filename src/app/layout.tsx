@@ -25,11 +25,18 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <span className="grid h-7 w-7 place-items-center rounded-lg bg-ink-900 text-sm text-white">C</span>
             Clasp
           </Link>
-          <Link href="/new" className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium ring-1 ring-ink-200 hover:bg-ink-100">
-            Create a Clasp
-          </Link>
+          <nav className="flex items-center gap-3 text-sm">
+            <Link href="/browse" className="font-medium text-ink-700 hover:text-ink-900">Browse</Link>
+            <Link href="/new" className="rounded-lg bg-white px-3 py-1.5 font-medium ring-1 ring-ink-200 hover:bg-ink-100">Sell or rent</Link>
+          </nav>
         </header>
         <main className="mx-auto max-w-xl px-4 pb-16">{children}</main>
+        <footer className="mx-auto flex max-w-xl flex-wrap gap-x-4 gap-y-1 px-4 pb-10 text-xs text-ink-500">
+          <Link href="/browse">Browse</Link>
+          <Link href="/agents">For AI agents</Link>
+          <a href="https://github.com/angelraph/clasp" target="_blank" rel="noreferrer">Source</a>
+          <span>PayPal sandbox</span>
+        </footer>
       </body>
     </html>
   );

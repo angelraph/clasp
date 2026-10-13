@@ -35,6 +35,8 @@ export const listings = pgTable("listings", {
   priceCents: integer("price_cents").notNull(),
   depositCents: integer("deposit_cents").notNull().default(0),
   currency: text("currency").notNull().default("USD"),
+  // Where the handoff happens (city / area). Handoffs are in person, so buyers need it.
+  location: text("location").notNull().default(""),
   sellerName: text("seller_name").notNull(),
   sellerPaypalEmail: text("seller_paypal_email").notNull(),
   // Where the seller wants updates, if different from (or instead of) push.
