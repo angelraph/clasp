@@ -1,7 +1,6 @@
 import { handler, type RouteCtx } from "@/lib/http";
 import { notifyLater } from "@/lib/notify";
-import * as paypal from "@/lib/paypal";
-import { getDeal, HttpError, logEvent, roleFor, updateDeal, updateListing, withTransition } from "@/lib/store";
+import { getDeal, HttpError, logEvent, releaseHold, roleFor, updateDeal, updateListing, withTransition } from "@/lib/store";
 
 /** Voids the hold before anything was captured. Either party can walk away. */
 export const POST = handler(async (req: Request, { params }: RouteCtx) => {
@@ -14,10 +13,10 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
 
   const authorizationId = deal.authorizationId;
   return withTransition(deal, "held", "voiding", async () => {
-    await paypal.voidAuthorization(authorizationId, `void-${deal.id}`);
+    const release = await releaseHold({ ...deal, authorizationId }, `void-${deal.id}`);
     await updateDeal(id, { status: "voided" });
     await updateListing(listing.id, { status: "verified" });
-    await logEvent({ dealId: id, type: "paypal.voided", payload: { by: role, reason: reason ?? null } });
+    await logEvent({ dealId: id, type: "deal.cancelled", payload: { by: role, reason: reason ?? null, released: release.voided } });
     notifyLater(role === "buyer" ? "seller" : "buyer", listing, deal, { title: "Deal cancelled", body: `The ${role} cancelled the deal for "${listing.title}". PayPal released the hold; no money moved.` });
     return { status: "voided" };
   });

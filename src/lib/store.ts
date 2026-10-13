@@ -182,6 +182,39 @@ export async function ensureFreshHold(deal: Deal): Promise<Deal> {
   return { ...deal, authorizationId: auth.id, authorizedAt };
 }
 
+/**
+ * Releases whatever is still held. PayPal can refuse to void a reauthorization (it wants
+ * the original) or a partially captured authorization; in that case we try the original,
+ * and if nothing can be voided the uncaptured remainder simply lapses. Either way no more
+ * money can be taken, because Clasp never captures again.
+ */
+export async function releaseHold(deal: Deal, requestId: string): Promise<{ voided: boolean; note: string }> {
+  if (!deal.authorizationId) return { voided: false, note: "No hold to release" };
+  const db = await getDb();
+  const [original] = await db
+    .select({ payload: schema.events.payload })
+    .from(schema.events)
+    .where(and(eq(schema.events.dealId, deal.id), eq(schema.events.type, "paypal.authorized")))
+    .limit(1);
+  const originalId = (original?.payload as { authorizationId?: string } | undefined)?.authorizationId;
+  const candidates = [...new Set([deal.authorizationId, originalId].filter((x): x is string => !!x))];
+
+  let lastError: unknown = null;
+  for (const id of candidates) {
+    try {
+      await paypal.voidAuthorization(id, `${requestId}-${id}`);
+      await logEvent({ dealId: deal.id, type: "paypal.voided", payload: { authorizationId: id } });
+      return { voided: true, note: "PayPal released the hold" };
+    } catch (err) {
+      lastError = err;
+      if (!(err instanceof paypal.PayPalError) || err.status !== 422) throw err;
+    }
+  }
+  const reason = lastError instanceof Error ? lastError.message : "refused";
+  await logEvent({ dealId: deal.id, type: "paypal.hold_lapses", payload: { reason } });
+  return { voided: false, note: "PayPal keeps the uncaptured remainder until it expires; Clasp will never capture it" };
+}
+
 /** The buyer protection fee for a price. Zero when the seller is the payee, since Clasp couldn't collect it. */
 export function feeFor(priceCents: number): number {
   return env.paypalSettlement() === "platform_payout" ? protectionFeeCents(priceCents, env.claspFeeBps()) : 0;

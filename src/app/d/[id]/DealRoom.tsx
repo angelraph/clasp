@@ -66,6 +66,8 @@ function eventLabel(e: State["events"][number]): string {
     "dispute.evidence_submitted": "Clasp sent the handoff record to PayPal as evidence",
     "dispute.defense_failed": "Couldn't send evidence automatically. Use “Send record to PayPal”",
     "paypal.voided": "PayPal hold cancelled, money released",
+    "paypal.hold_lapses": "Remaining hold will lapse on its own; nothing more can be charged",
+    "deal.cancelled": `Deal cancelled by the ${p.by ?? "buyer"}`,
     "handoff.match": "Handoff scan: identity matches",
     "handoff.mismatch": "Handoff scan: NOT the listed item",
     "handoff.rescan": "Handoff scan: another photo needed",
@@ -113,12 +115,12 @@ function useCountdown(target: string | undefined) {
   return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : `${h}h ${Math.floor((ms % 3_600_000) / 60_000)}m`;
 }
 
-export function DealRoom({ id, urlKey }: { id: string; urlKey: string | null }) {
+export function DealRoom({ id, urlKey, initialError }: { id: string; urlKey: string | null; initialError?: string | null }) {
   const [key, setKey] = useState<string | null>(urlKey);
   const [state, setState] = useState<State | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {

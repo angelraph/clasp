@@ -1,12 +1,12 @@
 import { handler, type RouteCtx } from "@/lib/http";
 import { formatMoney } from "@/lib/money";
 import { notifyLater } from "@/lib/notify";
-import * as paypal from "@/lib/paypal";
 import {
   captureForSeller,
   getDeal,
   HttpError,
   logEvent,
+  releaseHold,
   requireRole,
   updateDeal,
   updateListing,
@@ -29,19 +29,19 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
   }
 
   const totalCents = decision.totalCents;
-  const authorizationId = deal.authorizationId;
   return withTransition(deal, "returned", "settling", async () => {
+    let releaseNote = "PayPal released the rest of the hold";
     if (totalCents > 0) {
+      // A final capture closes the authorization, so PayPal releases the remainder itself.
       await captureForSeller({ deal, listing, captureCents: totalCents, payoutCents: totalCents, finalCapture: true, purpose: "damages" });
     } else {
-      await paypal.voidAuthorization(authorizationId, `void-${deal.id}-deposit`);
-      await logEvent({ dealId: id, type: "paypal.voided", payload: { reason: "clean return: deposit released" } });
+      releaseNote = (await releaseHold(deal, `void-${deal.id}-deposit`)).note;
     }
     await updateDeal(id, { status: "settled" });
-    notifyLater("buyer", listing, deal, { title: `Deposit released: ${formatMoney(listing.depositCents - totalCents)} back`, body: totalCents > 0 ? `${formatMoney(totalCents)} was charged from the price list you agreed to. The rest of your hold on "${listing.title}" is released.` : `Nothing was charged. PayPal released your full hold on "${listing.title}".` });
+    notifyLater("buyer", listing, deal, { title: `Deposit released: ${formatMoney(listing.depositCents - totalCents)} back`, body: totalCents > 0 ? `${formatMoney(totalCents)} was charged from the price list you agreed to. The rest of your hold on "${listing.title}" is released.` : `Nothing was charged on "${listing.title}". ${releaseNote}.` });
     // The item is back with the owner and can be rented again.
     await updateListing(listing.id, { status: "verified" });
-    await logEvent({ dealId: id, type: "deal.settled", payload: { chargedCents: totalCents, releasedCents: listing.depositCents - totalCents } });
+    await logEvent({ dealId: id, type: "deal.settled", payload: { chargedCents: totalCents, releasedCents: listing.depositCents - totalCents, releaseNote } });
     return { status: "settled" };
   });
 });

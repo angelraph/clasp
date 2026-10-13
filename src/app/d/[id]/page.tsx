@@ -5,9 +5,9 @@ export default async function DealPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ k?: string }>;
+  searchParams: Promise<{ k?: string; error?: string }>;
 }) {
   const { id } = await params;
-  const { k } = await searchParams;
-  return <DealRoom id={id} urlKey={k ?? null} />;
+  const { k, error } = await searchParams;
+  return <DealRoom id={id} urlKey={k ?? null} initialError={error ?? null} />;
 }

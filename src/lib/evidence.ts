@@ -72,6 +72,8 @@ const LABELS: Record<string, string> = {
   "paypal.capture": "PayPal capture",
   "paypal.payout": "PayPal payout to seller",
   "paypal.voided": "PayPal authorization voided",
+  "paypal.hold_lapses": "Uncaptured remainder left to lapse (no further capture)",
+  "deal.cancelled": "Deal cancelled",
   "handoff.match": "Handoff scan: identity matched",
   "handoff.mismatch": "Handoff scan: NOT the listed item",
   "handoff.rescan": "Handoff scan: more evidence requested",
