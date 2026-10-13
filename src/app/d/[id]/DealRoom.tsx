@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { NotifyButton } from "@/components/NotifyButton";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { ShareProof } from "@/components/ShareProof";
 import { formatMoney } from "@/lib/money";
@@ -375,6 +376,10 @@ export function DealRoom({ id, urlKey }: { id: string; urlKey: string | null }) 
             </button>
           )}
         </div>
+      )}
+
+      {role && key && !["released", "settled", "voided"].includes(deal.status) && (
+        <NotifyButton subscriptionKey={key} dealId={id} label={listing.mode === "rental" && role === "buyer" ? "Notify me when my deposit is back" : "Notify me about this deal"} />
       )}
 
       {notice && <p className="text-sm text-ok-600">{notice}</p>}

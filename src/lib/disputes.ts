@@ -5,6 +5,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "./db";
 import { buildEvidencePdf } from "./evidence";
+import { notify } from "./notify";
 import * as paypal from "./paypal";
 import { getDeal, logEvent } from "./store";
 
@@ -77,6 +78,10 @@ export async function defendDispute(disputeId: string): Promise<DefenseResult> {
     file: { name: `clasp-handoff-record-${deal.id}.pdf`, mime: "application/pdf", data: pdf },
   });
   await logEvent({ dealId, type: "dispute.evidence_submitted", payload: { disputeId, evidenceType, bytes: pdf.byteLength } });
+  await notify("seller", listing, deal, {
+    title: "Buyer opened a PayPal dispute. Your evidence is in",
+    body: `Clasp sent PayPal the handoff record for "${listing.title}": possession proof, the match result, photos and the full payment timeline.`,
+  });
   return { disputeId, dealId, outcome: "submitted" };
 }
 

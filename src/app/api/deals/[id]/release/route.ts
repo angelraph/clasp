@@ -1,4 +1,6 @@
 import { handler, type RouteCtx } from "@/lib/http";
+import { formatMoney } from "@/lib/money";
+import { notifyLater } from "@/lib/notify";
 import {
   captureForSeller,
   ensureFreshHold,
@@ -30,6 +32,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
     await updateDeal(id, { status: "released" });
     await updateListing(listing.id, { status: "closed" });
     await logEvent({ dealId: id, type: "deal.released", payload: { captureId: capture.id } });
+    notifyLater("seller", listing, deal, { title: `You've been paid ${formatMoney(listing.priceCents)}`, body: `The buyer verified "${listing.title}" and released the payment. PayPal is sending it to your account.` });
     return { status: "released", captureId: capture.id };
   });
 });

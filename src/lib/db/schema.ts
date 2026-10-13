@@ -37,6 +37,8 @@ export const listings = pgTable("listings", {
   currency: text("currency").notNull().default("USD"),
   sellerName: text("seller_name").notNull(),
   sellerPaypalEmail: text("seller_paypal_email").notNull(),
+  // Where the seller wants updates, if different from (or instead of) push.
+  notifyEmail: text("notify_email"),
   sellerKey: text("seller_key").notNull(),
   possessionCode: text("possession_code").notNull(),
   // draft -> verified -> reserved -> closed
@@ -53,6 +55,8 @@ export const deals = pgTable("deals", {
   id: text("id").primaryKey(),
   listingId: text("listing_id").notNull().references(() => listings.id),
   buyerKey: text("buyer_key").notNull(),
+  // From the PayPal payer on authorization, for deal updates.
+  buyerEmail: text("buyer_email"),
   orderId: text("order_id"),
   authorizationId: text("authorization_id"),
   authorizedCents: integer("authorized_cents").notNull(),
@@ -81,6 +85,16 @@ export const photos = pgTable("photos", {
   isPublic: boolean("is_public").notNull().default(false),
   mime: text("mime").notNull(),
   data: bytea("data").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Browser push subscriptions, scoped to the listing (seller) or deal (buyer) they follow. */
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  endpoint: text("endpoint").primaryKey(),
+  keys: jsonb("keys").$type<{ p256dh: string; auth: string }>().notNull(),
+  role: text("role").$type<"seller" | "buyer">().notNull(),
+  listingId: text("listing_id").notNull().references(() => listings.id),
+  dealId: text("deal_id").references(() => deals.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

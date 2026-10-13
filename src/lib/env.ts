@@ -21,5 +21,11 @@ export const env = {
   claspFeeBps: () => Number(process.env.CLASP_FEE_BPS ?? 500),
   openaiApiKey: () => required("OPENAI_API_KEY"),
   openaiModel: () => process.env.OPENAI_MODEL ?? "gpt-6.1-sol",
-  appUrl: () => process.env.APP_URL ?? "http://localhost:3000",
+  /** Public base URL: APP_URL if set to a real host, else Vercel's production domain, else localhost. */
+  appUrl: () =>
+    process.env.APP_URL && !process.env.APP_URL.includes("localhost")
+      ? process.env.APP_URL.replace(/\/$/, "")
+      : process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : (process.env.APP_URL ?? "http://localhost:3000"),
 };

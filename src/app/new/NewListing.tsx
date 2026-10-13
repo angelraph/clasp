@@ -48,6 +48,7 @@ export function NewListing({ initialMode }: { initialMode: Mode }) {
   const [deposit, setDeposit] = useState("");
   const [sellerName, setSellerName] = useState("");
   const [email, setEmail] = useState("");
+  const [notifyEmail, setNotifyEmail] = useState("");
   const [accessories, setAccessories] = useState<Row[]>([{ label: "Charger", price: "" }]);
   const [damage, setDamage] = useState<Row[]>([{ label: "Scratched lens or screen", price: "" }]);
 
@@ -76,6 +77,7 @@ export function NewListing({ initialMode }: { initialMode: Mode }) {
           depositCents: mode === "rental" ? parseDollarsToCents(deposit) : 0,
           sellerName,
           sellerPaypalEmail: email,
+          notifyEmail,
           accessories: mode === "rental" ? rows(accessories).map(({ name, priceCents }) => ({ name, priceCents })) : [],
           damageRules: mode === "rental" ? rows(damage).map(({ label, priceCents }) => ({ label, priceCents })) : [],
         }),
@@ -226,6 +228,10 @@ export function NewListing({ initialMode }: { initialMode: Mode }) {
         <div>
           <label className="label" htmlFor="email">PayPal email to get paid</label>
           <input id="email" className="field" type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <div>
+          <label className="label" htmlFor="notify">Email for updates <span className="font-normal text-ink-500">(optional)</span></label>
+          <input id="notify" className="field" type="email" placeholder="Where to tell you a buyer paid" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} />
         </div>
       </div>
 

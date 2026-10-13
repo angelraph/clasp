@@ -1,4 +1,5 @@
 import { handler, type RouteCtx } from "@/lib/http";
+import { notifyLater } from "@/lib/notify";
 import * as paypal from "@/lib/paypal";
 import { getDeal, HttpError, logEvent, roleFor, updateDeal, updateListing, withTransition } from "@/lib/store";
 
@@ -17,6 +18,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
     await updateDeal(id, { status: "voided" });
     await updateListing(listing.id, { status: "verified" });
     await logEvent({ dealId: id, type: "paypal.voided", payload: { by: role, reason: reason ?? null } });
+    notifyLater(role === "buyer" ? "seller" : "buyer", listing, deal, { title: "Deal cancelled", body: `The ${role} cancelled the deal for "${listing.title}". PayPal released the hold; no money moved.` });
     return { status: "voided" };
   });
 });

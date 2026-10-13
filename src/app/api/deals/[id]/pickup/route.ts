@@ -1,4 +1,6 @@
 import { handler, type RouteCtx } from "@/lib/http";
+import { formatMoney } from "@/lib/money";
+import { notifyLater } from "@/lib/notify";
 import { MIN_READ_CONFIDENCE } from "@/lib/policy";
 import {
   captureForSeller,
@@ -43,6 +45,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
     const deal = await ensureFreshHold({ ...current, pickupInspection });
     await captureForSeller({ deal, listing, captureCents: listing.priceCents + deal.feeCents, payoutCents: listing.priceCents, finalCapture: false, purpose: "rental_fee" });
     await updateDeal(id, { status: "active" });
+    notifyLater("seller", listing, deal, { title: `Rental started: ${formatMoney(listing.priceCents)} paid`, body: `The renter recorded the condition of "${listing.title}". Your fee is on its way; the deposit stays held until you scan it back in.` });
     return { status: "active", pickupInspection };
   });
 });

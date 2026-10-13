@@ -15,6 +15,7 @@ const body = z
     depositCents: z.number().int().min(0).max(1_000_000).default(0),
     sellerName: z.string().trim().min(1).max(60),
     sellerPaypalEmail: z.string().trim().email(),
+    notifyEmail: z.union([z.string().trim().email(), z.literal("")]).optional(),
     accessories: z.array(z.object({ name: z.string().trim().min(1).max(40), priceCents: cents })).max(10).default([]),
     damageRules: z.array(z.object({ label: z.string().trim().min(1).max(60), priceCents: cents })).max(10).default([]),
   })
@@ -38,6 +39,7 @@ export const POST = handler(async (req: Request) => {
     depositCents: input.mode === "rental" ? input.depositCents : 0,
     sellerName: input.sellerName,
     sellerPaypalEmail: input.sellerPaypalEmail,
+    notifyEmail: input.notifyEmail || null,
     sellerKey,
     possessionCode,
     accessories: input.mode === "rental" ? input.accessories : [],

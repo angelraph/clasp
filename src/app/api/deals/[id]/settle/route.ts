@@ -1,4 +1,6 @@
 import { handler, type RouteCtx } from "@/lib/http";
+import { formatMoney } from "@/lib/money";
+import { notifyLater } from "@/lib/notify";
 import * as paypal from "@/lib/paypal";
 import {
   captureForSeller,
@@ -36,6 +38,7 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
       await logEvent({ dealId: id, type: "paypal.voided", payload: { reason: "clean return: deposit released" } });
     }
     await updateDeal(id, { status: "settled" });
+    notifyLater("buyer", listing, deal, { title: `Deposit released: ${formatMoney(listing.depositCents - totalCents)} back`, body: totalCents > 0 ? `${formatMoney(totalCents)} was charged from the price list you agreed to. The rest of your hold on "${listing.title}" is released.` : `Nothing was charged. PayPal released your full hold on "${listing.title}".` });
     // The item is back with the owner and can be rented again.
     await updateListing(listing.id, { status: "verified" });
     await logEvent({ dealId: id, type: "deal.settled", payload: { chargedCents: totalCents, releasedCents: listing.depositCents - totalCents } });

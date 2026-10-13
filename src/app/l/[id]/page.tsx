@@ -2,6 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { NotifyButton } from "@/components/NotifyButton";
 import { PayButton } from "@/components/PayButton";
 import { getDb, schema } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
@@ -144,8 +146,10 @@ export default async function ListingPage({
       )}
 
       {isSeller && (
-        <div className="card">
+        <div className="card space-y-3">
+          <AutoRefresh />
           <h2 className="font-semibold">Seller view</h2>
+          <NotifyButton subscriptionKey={listing.sellerKey} listingId={listing.id} label="Notify me when a buyer pays" />
           {listing.status === "draft" && <p className="mt-1 text-sm text-ink-500">Finish verifying from the create page.</p>}
           {liveDeals.length === 0 ? (
             <p className="mt-1 text-sm text-ink-500">No buyers yet. Share your link: /l/{listing.id}</p>

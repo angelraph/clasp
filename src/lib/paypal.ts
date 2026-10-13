@@ -115,14 +115,15 @@ export async function getOrder(orderId: string): Promise<Order> {
 }
 
 /** Turns the buyer's approval into a hold. Nothing moves until a capture. */
-export async function authorizeOrder(orderId: string): Promise<Authorization> {
-  const order = await call<Order>("POST", `/v2/checkout/orders/${encodeURIComponent(orderId)}/authorize`, {
-    requestId: `authorize-${orderId}`,
-    body: {},
-  });
+export async function authorizeOrder(orderId: string): Promise<{ auth: Authorization; payerEmail: string | null }> {
+  const order = await call<Order & { payer?: { email_address?: string } }>(
+    "POST",
+    `/v2/checkout/orders/${encodeURIComponent(orderId)}/authorize`,
+    { requestId: `authorize-${orderId}`, body: {} },
+  );
   const auth = order.purchase_units[0]?.payments?.authorizations?.[0];
   if (!auth) throw new Error(`Order ${orderId} authorized but returned no authorization`);
-  return auth;
+  return { auth, payerEmail: order.payer?.email_address ?? null };
 }
 
 export async function getAuthorization(authorizationId: string): Promise<Authorization> {

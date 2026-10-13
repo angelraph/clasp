@@ -2,8 +2,10 @@ import { eq } from "drizzle-orm";
 import { after } from "next/server";
 import { getDb, schema } from "@/lib/db";
 import { defendDispute, findDealIdByCaptureId } from "@/lib/disputes";
+import { formatMoney } from "@/lib/money";
+import { notify } from "@/lib/notify";
 import { verifyWebhookSignature } from "@/lib/paypal";
-import { logEvent } from "@/lib/store";
+import { getDeal, logEvent } from "@/lib/store";
 
 export const maxDuration = 60;
 
@@ -97,6 +99,14 @@ export async function POST(req: Request) {
       amount,
     },
   });
+
+  if (event.event_type === "PAYMENT.PAYOUTS-ITEM.SUCCEEDED" && dealId) {
+    after(async () => {
+      const { deal, listing } = await getDeal(dealId);
+      const cents = Math.round(Number(amount?.value ?? 0) * 100);
+      await notify("seller", listing, deal, { title: `PayPal confirmed your payout${cents ? ` of ${formatMoney(cents)}` : ""}`, body: `The money for "${listing.title}" has landed in your PayPal account.` });
+    });
+  }
 
   if (event.event_type.startsWith("CUSTOMER.DISPUTE.") && r.dispute_id && event.event_type !== "CUSTOMER.DISPUTE.RESOLVED") {
     const disputeId = r.dispute_id;

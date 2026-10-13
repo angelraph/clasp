@@ -1,5 +1,6 @@
 import type { Identifier } from "@/lib/db/schema";
 import { handler, type RouteCtx } from "@/lib/http";
+import { notifyLater } from "@/lib/notify";
 import { decideSaleHandoff, type FeatureCheck, type LockStatus } from "@/lib/policy";
 import { getDeal, HttpError, logEvent, requireRole, savePhotos, updateDeal } from "@/lib/store";
 import { readHandoff } from "@/lib/vision";
@@ -75,5 +76,10 @@ export const POST = handler(async (req: Request, { params }: RouteCtx) => {
   };
   await updateDeal(id, { decision });
   await logEvent({ dealId: id, type: `handoff.${verdict.verdict}`, payload: { reading, verdict, carriedIdentity: carryIdentity, lockStatus } });
+  if (verdict.verdict === "mismatch") {
+    notifyLater("seller", listing, deal, { title: "Handoff check failed", body: `The buyer scanned an item that isn't the one you verified for "${listing.title}". No money moved; the hold is still in place.` });
+  } else if (verdict.verdict === "match") {
+    notifyLater("seller", listing, deal, { title: "Item matched at the handoff", body: `"${listing.title}" checked out. You'll be paid as soon as the buyer taps Release.` });
+  }
   return decision;
 });
