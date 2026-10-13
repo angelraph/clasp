@@ -5,7 +5,7 @@ const TONE: Record<string, string> = {
   too_low: "border-bad-600/30 bg-bad-50",
   low: "border-hold-600/30 bg-hold-50",
   fair: "border-ok-600/30 bg-ok-50",
-  above_new: "border-hold-600/30 bg-hold-50",
+  high: "border-hold-600/30 bg-hold-50",
   unknown: "",
 };
 
@@ -23,7 +23,7 @@ export function MarketCard({ market, askingCents, isSeller }: { market: MarketCh
       </div>
       {s.referenceCents !== null ? (
         <p className="mt-2">
-          {s.referenceKind === "used" ? "Used" : "New"} from about <strong>{formatMoney(s.referenceCents)}</strong>. This listing is{" "}
+          Typical retail price about <strong>{formatMoney(s.referenceCents)}</strong> ({s.offerCount} offers, new and refurbished). This listing is{" "}
           <strong>{s.percentOfReference}%</strong> of that.
         </p>
       ) : null}

@@ -292,13 +292,34 @@ export function priceRentalReturn(input: {
 
 // ---------------------------------------------------------------- market price
 
+/**
+ * Whether a catalog product is the same model as the listing. Every model-number token
+ * (anything containing a digit, like "A58", "13", "256GB" excluded) and the brand must
+ * appear in the product title; otherwise its prices would compare apples to oranges.
+ */
+export function isSameModel(input: { make: string | null; model: string | null; productTitle: string; brands?: string[] }): boolean {
+  const title = ` ${input.productTitle.toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
+  // Catalogs often keep the brand in a separate field rather than the title.
+  const brandText = ` ${(input.brands ?? []).join(" ").toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
+  const words = (s: string | null) => (s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ").filter(Boolean);
+  const make = words(input.make);
+  // Storage/colour-style tokens vary between offers of the same model, so they don't decide identity.
+  const modelTokens = words(input.model).filter((t) => /\d/.test(t) && !/^\d+(gb|tb|mm|in)$/.test(t));
+  if (make.length === 0 || modelTokens.length === 0) return false;
+  const makeOk = make.every((t) => title.includes(` ${t} `) || brandText.includes(` ${t} `));
+  return makeOk && modelTokens.every((t) => title.includes(` ${t} `));
+}
+
 export type PriceSignal = {
-  level: "too_low" | "low" | "fair" | "above_new" | "unknown";
+  level: "too_low" | "low" | "fair" | "high" | "unknown";
   referenceCents: number | null;
-  referenceKind: "used" | "new" | null;
+  offerCount: number;
   percentOfReference: number | null;
   message: string;
 };
+
+/** Fewer offers than this and a "going rate" would be one retailer's opinion. */
+export const MIN_MARKET_OFFERS = 3;
 
 function median(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -308,32 +329,34 @@ function median(values: number[]): number | null {
 }
 
 /**
- * Compares an asking price to live retail offers. Used offers are the better reference
- * for second-hand goods; with fewer than 3, used prices are estimated from new ones.
+ * Compares an asking price to the typical retail offer for the same model. Retailers label
+ * refurbished stock as "new" inconsistently, so all offers form one reference rather than
+ * claiming a "new" price that may not exist.
  */
-export function priceSignal(input: { askingCents: number; newOfferCents: number[]; usedOfferCents: number[] }): PriceSignal {
-  const newMedian = median(input.newOfferCents);
-  const usedMedian = input.usedOfferCents.length >= 3 ? median(input.usedOfferCents) : null;
-  if (newMedian === null && usedMedian === null) {
-    return { level: "unknown", referenceCents: null, referenceKind: null, percentOfReference: null, message: "No comparable retail prices found." };
+export function priceSignal(input: { askingCents: number; offerCents: number[] }): PriceSignal {
+  const offerCount = input.offerCents.length;
+  const referenceCents = offerCount >= MIN_MARKET_OFFERS ? median(input.offerCents) : null;
+  if (referenceCents === null) {
+    return {
+      level: "unknown",
+      referenceCents: null,
+      offerCount,
+      percentOfReference: null,
+      message: offerCount ? `Only ${offerCount} comparable retail offer${offerCount === 1 ? "" : "s"}, not enough to judge the price.` : "No comparable retail prices found.",
+    };
   }
-  const referenceKind = usedMedian !== null ? "used" : "new";
-  const referenceCents = (usedMedian ?? newMedian)!;
   const pct = Math.round((input.askingCents / referenceCents) * 100);
-
-  if (newMedian !== null && input.askingCents > newMedian * 1.05) {
-    return { level: "above_new", referenceCents: newMedian, referenceKind: "new", percentOfReference: Math.round((input.askingCents / newMedian) * 100), message: "Priced above what it costs new. Worth comparing before you buy." };
+  const base = { referenceCents, offerCount, percentOfReference: pct };
+  if (pct < 40) {
+    return { ...base, level: "too_low", message: "Far below the going rate. Scams often look like this, which is why Clasp holds the money until you check the item." };
   }
-  // Second-hand goods typically sell at 40-80% of new. Far below that is the classic scam bait.
-  const floor = referenceKind === "used" ? 0.5 : 0.3;
-  const low = referenceKind === "used" ? 0.75 : 0.45;
-  if (input.askingCents < referenceCents * floor) {
-    return { level: "too_low", referenceCents, referenceKind, percentOfReference: pct, message: "Far below the going rate. Scams often look like this, which is why Clasp holds the money until you check the item." };
+  if (pct < 65) {
+    return { ...base, level: "low", message: "A good deal compared with retail. Check the condition carefully at the handoff." };
   }
-  if (input.askingCents < referenceCents * low) {
-    return { level: "low", referenceCents, referenceKind, percentOfReference: pct, message: "A good deal compared with the market. Check the condition carefully at the handoff." };
+  if (pct > 130) {
+    return { ...base, level: "high", message: "Priced above typical retail offers for this model. Worth comparing before you buy." };
   }
-  return { level: "fair", referenceCents, referenceKind, percentOfReference: pct, message: "In line with the market." };
+  return { ...base, level: "fair", message: "In line with typical retail offers for this model." };
 }
 
 // ---------------------------------------------------------------- hold clock

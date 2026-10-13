@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decideSaleHandoff,
   holdClock,
+  isSameModel,
   isValidImei,
   newPossessionCode,
   priceRentalReturn,
@@ -181,24 +182,45 @@ describe("priceRentalReturn", () => {
   });
 });
 
+describe("isSameModel", () => {
+  it("rejects a different model from the same brand", () => {
+    expect(isSameModel({ make: "OPPO", model: "A58", productTitle: "Oppo Reno4 Pro 5G" })).toBe(false);
+  });
+  it("rejects unrelated products sharing a brand word", () => {
+    expect(isSameModel({ make: "OPPO", model: "A58", productTitle: "OPPO Chucky Flip Flops" })).toBe(false);
+  });
+  it("accepts the same model regardless of storage or punctuation", () => {
+    expect(isSameModel({ make: "Apple", model: "iPhone 13 128GB", productTitle: "Apple iPhone 13, 256GB, Midnight - Unlocked" })).toBe(true);
+  });
+  it("does not let 13 match 13 Pro Max's sibling 14", () => {
+    expect(isSameModel({ make: "Apple", model: "iPhone 13", productTitle: "Apple iPhone 14 Pro" })).toBe(false);
+  });
+  it("accepts the brand from the catalog brand field", () => {
+    expect(isSameModel({ make: "Apple", model: "iPhone 13", productTitle: "iPhone 13 128GB (Unlocked)", brands: ["Apple"] })).toBe(true);
+  });
+  it("refuses to judge without a model number", () => {
+    expect(isSameModel({ make: "IKEA", model: "sofa", productTitle: "IKEA sofa" })).toBe(false);
+  });
+});
+
 describe("priceSignal", () => {
-  const newOffers = [80000, 82000, 79900, 85000];
+  const offers = [24200, 23500, 26900, 27400, 39900];
   it("flags far-below-market prices", () => {
-    expect(priceSignal({ askingCents: 15000, newOfferCents: newOffers, usedOfferCents: [] }).level).toBe("too_low");
+    expect(priceSignal({ askingCents: 9000, offerCents: offers }).level).toBe("too_low");
   });
-  it("calls a normal second-hand price fair", () => {
-    expect(priceSignal({ askingCents: 45000, newOfferCents: newOffers, usedOfferCents: [] }).level).toBe("fair");
+  it("calls a typical second-hand price fair", () => {
+    expect(priceSignal({ askingCents: 30000, offerCents: offers }).level).toBe("fair");
   });
-  it("prefers used offers as the reference when there are enough", () => {
-    const s = priceSignal({ askingCents: 40000, newOfferCents: newOffers, usedOfferCents: [42000, 45000, 39000] });
-    expect(s.referenceKind).toBe("used");
-    expect(s.level).toBe("fair");
+  it("notes a bargain without crying scam", () => {
+    expect(priceSignal({ askingCents: 15000, offerCents: offers }).level).toBe("low");
   });
-  it("warns when priced above new", () => {
-    expect(priceSignal({ askingCents: 95000, newOfferCents: newOffers, usedOfferCents: [] }).level).toBe("above_new");
+  it("warns when priced well above retail", () => {
+    expect(priceSignal({ askingCents: 45000, offerCents: offers }).level).toBe("high");
   });
-  it("says unknown with no data instead of guessing", () => {
-    expect(priceSignal({ askingCents: 1000, newOfferCents: [], usedOfferCents: [] }).level).toBe("unknown");
+  it("refuses to judge on fewer than three offers", () => {
+    const s = priceSignal({ askingCents: 1000, offerCents: [20000, 21000] });
+    expect(s.level).toBe("unknown");
+    expect(s.offerCount).toBe(2);
   });
 });
 
