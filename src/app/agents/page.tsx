@@ -16,7 +16,7 @@ const TOOLS = [
 export default function AgentsPage() {
   const url = `${env.appUrl()}/api/mcp`;
   return (
-    <div className="space-y-4 pt-2">
+    <div className="mx-auto max-w-xl px-4 pt-6 space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Clasp for AI agents</h1>
         <p className="mt-2 text-ink-700">

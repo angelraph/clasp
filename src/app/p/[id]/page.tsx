@@ -52,7 +52,7 @@ export default async function ProofPage({ params }: Props) {
   if (!p) notFound();
 
   return (
-    <div className="space-y-4 pt-2">
+    <div className="mx-auto max-w-xl px-4 pt-6 space-y-4">
       <div className="card overflow-hidden p-0">
         {p.coverPhotoId && (
           // eslint-disable-next-line @next/next/no-img-element

@@ -1,51 +1,155 @@
 @import "tailwindcss";
 
+/*
+ * Clasp: a paper receipt and a metal latch. Warm paper, warm ink, one metal (brass).
+ * Status colors are reserved for money states: matched (green), kept (dark brass),
+ * mismatch (oxblood, rare). PayPal's own button keeps PayPal's colors.
+ */
 @theme {
-  --color-ink-50: #f6f7f9;
-  --color-ink-100: #eceef2;
-  --color-ink-200: #d9dde5;
-  --color-ink-300: #b6bdcb;
-  --color-ink-500: #6b7385;
-  --color-ink-700: #363c4a;
-  --color-ink-900: #11141b;
-  --color-clasp-50: #eef4ff;
-  --color-clasp-500: #1f6feb;
-  --color-clasp-600: #1a5fd0;
-  --color-ok-50: #ecfdf3;
-  --color-ok-600: #067647;
-  --color-hold-50: #fff8eb;
-  --color-hold-600: #b54708;
-  --color-bad-50: #fef3f2;
-  --color-bad-600: #b42318;
+  --color-paper: #f4f1ea;
+  --color-card: #fbf9f5;
+  --color-line: #e6e1d6;
+  --color-brass: #a67c52;
+  --color-brass-ink: #7a5532;
+  --color-brass-tint: #f1e8da;
+  --color-matched: #1f6b4a;
+  --color-matched-tint: #e6efe8;
+  --color-kept: #8a5a12;
+  --color-kept-tint: #f4eadb;
+  --color-oxblood: #8f2d2a;
+  --color-oxblood-tint: #f5e5e2;
+
+  /* Neutral ramp, warm. Existing class names map onto the new palette. */
+  --color-ink-50: #f4f1ea;
+  --color-ink-100: #ece8df;
+  --color-ink-200: #e6e1d6;
+  --color-ink-300: #d2cbbd;
+  --color-ink-500: #6f6a62;
+  --color-ink-700: #3a3733;
+  --color-ink-900: #141413;
+
+  --color-clasp-50: #f1e8da;
+  --color-clasp-500: #a67c52;
+  --color-clasp-600: #7a5532;
+  --color-ok-50: #e6efe8;
+  --color-ok-600: #1f6b4a;
+  --color-hold-50: #f4eadb;
+  --color-hold-600: #8a5a12;
+  --color-bad-50: #f5e5e2;
+  --color-bad-600: #8f2d2a;
+
+  --radius-card: 10px;
+
+  --animate-rise: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade: fade 0.6s ease both;
+}
+
+/* Inline so the utilities reference next/font's variables, which live on <body>, not :root. */
+@theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-newsreader);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes scan {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50% { transform: translateY(300px); opacity: 1; }
+}
+@keyframes fill-bar {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes type-line {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--color-ink-50);
+  background: var(--color-paper);
   color: var(--color-ink-900);
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: var(--color-brass-tint);
 }
 
 @utility card {
-  @apply rounded-2xl border border-ink-200 bg-white p-5;
+  @apply rounded-[10px] border border-line bg-card p-5;
 }
 
 @utility btn {
-  @apply inline-flex w-full items-center justify-center rounded-xl px-4 py-3 font-medium transition disabled:opacity-50;
+  @apply inline-flex w-full items-center justify-center rounded-[10px] px-4 py-3 text-[15px] font-medium transition-colors disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-ink-900 text-white hover:bg-ink-700;
+  @apply btn bg-ink-900 text-paper hover:bg-ink-700;
 }
 @utility btn-secondary {
-  @apply btn border border-ink-300 bg-white text-ink-900 hover:bg-ink-100;
+  @apply btn border border-line bg-card text-ink-900 hover:bg-ink-100;
 }
 @utility btn-danger {
-  @apply btn border border-bad-600/30 bg-bad-50 text-bad-600 hover:bg-bad-600/10;
+  @apply btn border border-oxblood/25 bg-oxblood-tint text-oxblood hover:bg-oxblood/10;
 }
 
 @utility field {
-  @apply w-full rounded-xl border border-ink-300 bg-white px-3 py-2.5 outline-none focus:border-clasp-500 focus:ring-2 focus:ring-clasp-500/20;
+  @apply w-full rounded-[10px] border border-line bg-card px-3 py-2.5 outline-none placeholder:text-ink-500/70 focus:border-brass focus:ring-2 focus:ring-brass/20;
 }
 @utility label {
   @apply mb-1 block text-sm font-medium text-ink-700;
+}
+
+/* Money is the largest thing on a money screen, set in the serif with tabular figures. */
+@utility amount {
+  @apply font-serif font-medium tracking-tight;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Status: a word in small tracked capitals. */
+@utility status {
+  @apply inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em];
+}
+
+/* Serials and IDs read as identifiers, not sentences. */
+@utility serial {
+  @apply font-mono text-[13px] tracking-wide;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scroll-reveal: elements fade up once when they enter the viewport. */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
 }

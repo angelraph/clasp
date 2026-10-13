@@ -21,7 +21,7 @@ export default async function BrowsePage({ searchParams }: Props) {
   });
 
   return (
-    <div className="space-y-4 pt-2">
+    <div className="mx-auto max-w-xl px-4 pt-6 space-y-4">
       <h1 className="text-2xl font-semibold">Verified listings</h1>
       <form className="card space-y-3" action="/browse">
         <input name="q" defaultValue={q} className="field" placeholder="What are you looking for?" />

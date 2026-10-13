@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { NotifyButton } from "@/components/NotifyButton";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { ShareProof } from "@/components/ShareProof";
+import { DEAL_STATUS, Status } from "@/components/Status";
 import { formatMoney } from "@/lib/money";
 
 type Charge = { reason: string; amountCents: number; evidencePhotoId: string | null };
@@ -37,20 +38,6 @@ type State = {
     clock: { honorEndsAt: string; expiresAt: string; phase: string } | null;
   };
   events: { type: string; at: string; payload: Record<string, unknown> }[];
-};
-
-const STATUS: Record<string, { label: string; tone: string }> = {
-  awaiting_payment: { label: "Waiting for payment", tone: "bg-ink-100 text-ink-700" },
-  held: { label: "Money held by PayPal", tone: "bg-hold-50 text-hold-600" },
-  releasing: { label: "Paying seller…", tone: "bg-hold-50 text-hold-600" },
-  released: { label: "Seller paid", tone: "bg-ok-50 text-ok-600" },
-  picking_up: { label: "Recording pickup…", tone: "bg-hold-50 text-hold-600" },
-  active: { label: "Rented out · deposit held", tone: "bg-clasp-50 text-clasp-600" },
-  returned: { label: "Returned · awaiting settlement", tone: "bg-hold-50 text-hold-600" },
-  settling: { label: "Settling…", tone: "bg-hold-50 text-hold-600" },
-  settled: { label: "Settled", tone: "bg-ok-50 text-ok-600" },
-  voiding: { label: "Cancelling hold…", tone: "bg-ink-100 text-ink-700" },
-  voided: { label: "Cancelled · no money moved", tone: "bg-ink-100 text-ink-700" },
 };
 
 function eventLabel(e: State["events"][number]): string {
@@ -182,222 +169,302 @@ export function DealRoom({ id, urlKey, initialError }: { id: string; urlKey: str
     }
   }
 
-  if (!state) return <p className="pt-10 text-center text-ink-500">{error ?? "Loading…"}</p>;
+  if (!state) return <p className="mx-auto max-w-xl px-4 pt-16 text-center text-ink-500">{error ?? "Loading…"}</p>;
   const { listing, deal, role } = state;
-  const status = STATUS[deal.status] ?? { label: deal.status, tone: "bg-ink-100" };
+  const s = DEAL_STATUS[deal.status] ?? { word: deal.status, tone: "muted" as const, line: "" };
   const held = deal.authorizedCents - deal.capturedCents;
-  const isOpenHold = ["held", "active", "returned"].includes(deal.status);
+  const isOpenHold = ["held", "active", "returned", "releasing", "picking_up", "settling"].includes(deal.status);
   const decision = deal.decision;
+  const party = listing.mode === "sale" ? "seller" : "owner";
+  const youAre = role === "seller" ? party : role === "buyer" ? (listing.mode === "sale" ? "buyer" : "renter") : null;
+
+  // The one number that matters right now.
+  const hero =
+    deal.status === "released"
+      ? { cents: deal.paidOutCents, label: `paid to ${listing.sellerName.split(/\s+/)[0]}` }
+      : deal.status === "settled" && decision?.kind === "rental_return"
+        ? { cents: decision.releasedCents, label: "of the deposit released" }
+        : deal.status === "voided"
+          ? { cents: 0, label: "charged" }
+          : { cents: isOpenHold ? held : deal.authorizedCents, label: isOpenHold ? "held by PayPal, not charged" : "to authorize" };
 
   const scanner = (title: string, hint: string, path: string, cta: string) => (
-    <div className="card space-y-3">
-      <h2 className="font-semibold">{title}</h2>
-      <PhotoPicker files={photos} onChange={setPhotos} hint={hint} />
+    <div className="card space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <p className="mt-1 text-sm text-ink-500">{hint}</p>
+      </div>
+      <PhotoPicker files={photos} onChange={setPhotos} />
       <button className="btn-primary" disabled={!!busy || photos.length === 0} onClick={() => act(path, cta, true)}>
-        {busy === cta ? "AI is checking the photos…" : cta}
+        {busy === cta ? "Reading the photos…" : cta}
       </button>
     </div>
   );
 
+  const thumb = (p: string) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img key={p} src={`/api/photos/${p}?k=${encodeURIComponent(key ?? "")}`} alt="Scan" className="aspect-square w-full rounded-[10px] object-cover" />
+  );
+
   return (
-    <div className="space-y-4 pt-2">
-      <div className="card">
+    <div className="mx-auto max-w-xl space-y-6 px-4 pb-16 pt-6">
+      {/* header: status word, the one amount, nothing else */}
+      <section>
         <p className="text-sm text-ink-500">
-          {listing.mode === "sale" ? "Purchase" : "Rental"} from {listing.sellerName}
-          {role && ` · you are the ${role === "seller" ? (listing.mode === "sale" ? "seller" : "owner") : listing.mode === "sale" ? "buyer" : "renter"}`}
+          {listing.mode === "sale" ? "Purchase" : "Rental"} · {listing.title}
+          {youAre && <span className="text-ink-300"> · you&apos;re the {youAre}</span>}
         </p>
-        <h1 className="mt-0.5 text-xl font-semibold">{listing.title}</h1>
-        <span className={`mt-3 inline-block rounded-full px-3 py-1 text-sm font-medium ${status.tone}`}>{status.label}</span>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-xl bg-ink-50 p-3">
-            <p className="text-ink-500">Still held</p>
-            <p className="text-lg font-semibold">{formatMoney(isOpenHold ? held : 0)}</p>
-          </div>
-          <div className="rounded-xl bg-ink-50 p-3">
-            <p className="text-ink-500">Paid to {listing.mode === "sale" ? "seller" : "owner"}</p>
-            <p className="text-lg font-semibold">{formatMoney(deal.paidOutCents)}</p>
-          </div>
+        <div className="mt-4">
+          <Status tone={s.tone} pulse={deal.status === "held"}>{s.word}</Status>
         </div>
-        {deal.feeCents > 0 && (
-          <p className="mt-3 text-xs text-ink-500">
-            Includes a {formatMoney(deal.feeCents)} Clasp buyer protection fee, charged only when the deal completes. The{" "}
-            {listing.mode === "sale" ? "seller" : "owner"} receives their full {formatMoney(listing.priceCents)}.
-          </p>
-        )}
+        <p className="amount mt-2 text-6xl leading-none">{formatMoney(hero.cents)}</p>
+        <p className="mt-2 text-ink-500">{hero.label}</p>
+
+        <dl className="mt-6 grid grid-cols-3 divide-x divide-line border-y border-line text-sm">
+          <div className="py-3 pr-3">
+            <dt className="text-ink-500">Authorized</dt>
+            <dd className="amount mt-0.5 text-base">{formatMoney(deal.authorizedCents)}</dd>
+          </div>
+          <div className="px-3 py-3">
+            <dt className="text-ink-500">Captured</dt>
+            <dd className="amount mt-0.5 text-base">{formatMoney(deal.capturedCents)}</dd>
+          </div>
+          <div className="py-3 pl-3">
+            <dt className="text-ink-500">To {party}</dt>
+            <dd className="amount mt-0.5 text-base">{formatMoney(deal.paidOutCents)}</dd>
+          </div>
+        </dl>
         {deal.status === "held" && honorLeft && (
           <p className="mt-3 text-xs text-ink-500">
-            PayPal guarantees the hold for {honorLeft === "ended" ? "—" : honorLeft} more; after that Clasp renews it (up to 29 days).
+            Guaranteed by PayPal for {honorLeft === "ended" ? "a little longer" : honorLeft}; Clasp renews it automatically, up to 29 days.
           </p>
         )}
-      </div>
+        {deal.feeCents > 0 && (
+          <p className="mt-1 text-xs text-ink-500">
+            Includes {formatMoney(deal.feeCents)} buyer protection. The {party} receives their full {formatMoney(listing.priceCents)}.
+          </p>
+        )}
+      </section>
 
+      {/* the latest verdict */}
       {decision?.kind === "sale_handoff" && (
-        <div
-          className={`card ${
-            decision.verdict === "match" ? "border-ok-600/30 bg-ok-50" : decision.verdict === "rescan" ? "border-hold-600/30 bg-hold-50" : "border-bad-600/30 bg-bad-50"
+        <section
+          className={`rounded-[10px] border p-5 ${
+            decision.verdict === "match"
+              ? "border-matched/25 bg-matched-tint"
+              : decision.verdict === "rescan"
+                ? "border-line bg-card"
+                : "border-oxblood/25 bg-oxblood-tint"
           }`}
         >
-          <p className="font-semibold">
-            {decision.verdict === "match" && "✓ This is the listed item"}
-            {decision.verdict === "mismatch" && "✕ This is NOT the listed item"}
-            {decision.verdict === "locked" && "✕ The device is still locked"}
-            {decision.verdict === "rescan" && "One more photo needed"}
+          <Status tone={decision.verdict === "match" ? "matched" : decision.verdict === "rescan" ? "kept" : "oxblood"}>
+            {decision.verdict === "match" ? "Matched" : decision.verdict === "mismatch" ? "Mismatch" : decision.verdict === "locked" ? "Locked" : "One more photo"}
+          </Status>
+          <p className="mt-2 text-lg font-medium">
+            {decision.verdict === "match" && "This is the listed item."}
+            {decision.verdict === "mismatch" && "This is not the listed item."}
+            {decision.verdict === "locked" && "The device's anti-theft lock is on."}
+            {decision.verdict === "rescan" && "Almost there. One more photo needed."}
           </p>
-          <ul className="mt-1 list-disc pl-5 text-sm">{decision.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
-          <div className="mt-3 flex gap-2">
-            {decision.photoIds.map((p) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={p} src={`/api/photos/${p}?k=${encodeURIComponent(key ?? "")}`} alt="Handoff scan" className="h-20 w-20 rounded-lg object-cover" />
+          <ul className="mt-2 space-y-1 text-sm text-ink-700">
+            {decision.reasons.map((r) => (
+              <li key={r}>{r}</li>
             ))}
-          </div>
-          {decision.verdict !== "match" && <p className="mt-2 text-sm">No money has moved. The hold stays until you rescan or cancel.</p>}
-        </div>
+          </ul>
+          {decision.photoIds.length > 0 && <div className="mt-4 grid grid-cols-4 gap-2">{decision.photoIds.slice(-4).map(thumb)}</div>}
+          {decision.verdict !== "match" && <p className="mt-3 text-sm text-ink-500">No money has moved. The hold stays until you scan again or cancel.</p>}
+        </section>
       )}
 
       {decision?.kind === "rental_return" && (
-        <div className={`card ${decision.verdict === "clean" ? "border-ok-600/30 bg-ok-50" : "border-hold-600/30 bg-hold-50"}`}>
-          <p className="font-semibold">{decision.verdict === "clean" ? "✓ Returned in the same condition" : "Agreed charges found"}</p>
+        <section className="rounded-[10px] border border-line bg-card p-5">
+          <Status tone={decision.verdict === "clean" ? "matched" : "kept"}>{decision.verdict === "clean" ? "Clean return" : "Kept"}</Status>
+          <p className="mt-2 text-lg font-medium">{decision.verdict === "clean" ? "Returned in the same condition." : "Charges from the agreed list."}</p>
           {decision.charges.length > 0 && (
-            <ul className="mt-2 divide-y divide-ink-200 text-sm">
+            <ul className="mt-3 divide-y divide-line border-y border-line text-sm">
               {decision.charges.map((c) => (
-                <li key={c.reason} className="flex items-center justify-between gap-3 py-2">
-                  <span className="flex items-center gap-2">
+                <li key={c.reason} className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="flex items-center gap-3">
                     {c.evidencePhotoId && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={`/api/photos/${c.evidencePhotoId}?k=${encodeURIComponent(key ?? "")}`} alt="" className="h-10 w-10 rounded object-cover" />
+                      <img src={`/api/photos/${c.evidencePhotoId}?k=${encodeURIComponent(key ?? "")}`} alt="" className="h-10 w-10 rounded-[6px] object-cover" />
                     )}
                     {c.reason}
                   </span>
-                  <span className="font-medium">{formatMoney(c.amountCents)}</span>
+                  <span className="amount">{formatMoney(c.amountCents)}</span>
                 </li>
               ))}
             </ul>
           )}
           {decision.flaggedNotCharged.length > 0 && (
-            <div className="mt-2 text-sm text-ink-700">
-              <p className="font-medium">Flagged, not charged</p>
-              <ul className="list-disc pl-5">{decision.flaggedNotCharged.map((f) => <li key={f}>{f}</li>)}</ul>
+            <div className="mt-4 text-sm">
+              <p className="status text-ink-500">Flagged, not charged</p>
+              <ul className="mt-1 space-y-1 text-ink-700">
+                {decision.flaggedNotCharged.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
             </div>
           )}
-          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-            <p>Charged: <strong>{formatMoney(decision.totalCents)}</strong></p>
-            <p>Back to renter: <strong>{formatMoney(decision.releasedCents)}</strong></p>
-          </div>
-        </div>
+          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt className="status text-kept">Kept</dt>
+              <dd className="amount text-xl">{formatMoney(decision.totalCents)}</dd>
+            </div>
+            <div>
+              <dt className="status text-ink-700">Released</dt>
+              <dd className="amount text-xl">{formatMoney(decision.releasedCents)}</dd>
+            </div>
+          </dl>
+        </section>
       )}
 
-      {/* ---------- actions ---------- */}
+      {/* the one thing to do next */}
       {listing.mode === "sale" && deal.status === "held" && role === "buyer" && (
-        <>
+        <div className="space-y-3">
           {decision?.kind === "sale_handoff" && decision.canRelease ? (
-            <button className="btn-primary" disabled={!!busy} onClick={() => act("release", "release")}>
-              {busy === "release" ? "Paying seller…" : `Release ${formatMoney(listing.priceCents)} to ${listing.sellerName}`}
+            <button className="btn-primary py-4 text-base" disabled={!!busy} onClick={() => act("release", "release")}>
+              {busy === "release" ? "Paying the seller…" : `Release ${formatMoney(listing.priceCents)} to ${listing.sellerName.split(/\s+/)[0]}`}
             </button>
           ) : (
             scanner(
-              "At the handoff: scan the item",
+              "Scan the item in your hands",
               [
                 listing.identifierKinds.length
-                  ? `Photograph the ${listing.identifierKinds.join(" / ")} on the item in hand.`
+                  ? `Photograph the ${listing.identifierKinds.join(" / ")} on the device you're holding (on a phone, dial *#06# yourself).`
                   : `Photograph these marks up close: ${listing.distinctiveFeatures.join("; ")}.`,
-                listing.hasAntiTheftLock
-                  ? "Also photograph the Find My / Find Hub screen with its main switch off. One scan or separate scans both work."
-                  : "",
+                listing.hasAntiTheftLock ? "Also photograph the Find My / Find Hub screen with its main switch off. One scan or separate scans both work." : "",
               ].join(" "),
               "handoff",
               "Check this item",
             )
           )}
-          <button className="btn-danger" disabled={!!busy} onClick={() => act("cancel", "cancel")}>Cancel and release my hold</button>
-        </>
-      )}
-      {listing.mode === "sale" && deal.status === "held" && role === "seller" && (
-        <div className="card text-sm text-ink-700">
-          The buyer&apos;s money is held. At the meetup, they scan the item. If it matches your verified listing, you&apos;re paid instantly.
+          <button className="w-full py-2 text-sm text-ink-500 hover:text-oxblood" disabled={!!busy} onClick={() => act("cancel", "cancel")}>
+            Cancel and release my hold
+          </button>
         </div>
       )}
+      {listing.mode === "sale" && deal.status === "held" && role === "seller" && (
+        <p className="rounded-[10px] border border-line bg-card p-5 text-ink-700">
+          The buyer&apos;s money is held. At the meetup they scan the item; if it matches your verified listing, you&apos;re paid on the spot.
+        </p>
+      )}
 
-      {listing.mode === "rental" && deal.status === "held" && role === "buyer" &&
+      {listing.mode === "rental" &&
+        deal.status === "held" &&
+        role === "buyer" &&
         scanner(
-          "At pickup: record what you received",
-          `Photograph the item from all sides and lay out every accessory (${listing.accessories.map((a) => a.name).join(", ") || "none listed"}). This protects you at return.`,
+          "Record what you received",
+          `Photograph the item from all sides with every accessory laid out (${listing.accessories.map((a) => a.name).join(", ") || "none listed"}). This protects you at return.`,
           "pickup",
           "Record pickup and pay the fee",
         )}
-      {listing.mode === "rental" && deal.status === "held" && (
-        <button className="btn-danger" disabled={!!busy || !role} onClick={() => act("cancel", "cancel")}>Cancel and release the hold</button>
+      {listing.mode === "rental" && deal.status === "held" && role && (
+        <button className="w-full py-2 text-sm text-ink-500 hover:text-oxblood" disabled={!!busy} onClick={() => act("cancel", "cancel")}>
+          Cancel and release the hold
+        </button>
       )}
       {listing.mode === "rental" && deal.status === "active" && deal.pickupInspection && (
-        <div className="card text-sm">
-          <p className="font-medium">Recorded at pickup</p>
-          <ul className="mt-1 list-disc pl-5 text-ink-700">
+        <section className="rounded-[10px] border border-line bg-card p-5 text-sm">
+          <p className="status text-ink-500">Recorded at pickup</p>
+          <ul className="mt-2 space-y-1 text-ink-700">
             {Object.entries(deal.pickupInspection.presentAtPickup).map(([name, present]) => (
-              <li key={name}>{name}: {present ? "received" : "not seen (can't be charged)"}</li>
+              <li key={name} className="flex justify-between">
+                <span>{name}</span>
+                <span className={present ? "text-matched" : "text-ink-500"}>{present ? "received" : "not seen · can't be charged"}</span>
+              </li>
             ))}
-            {deal.pickupInspection.conditionNotes.map((n) => <li key={n}>Existing: {n}</li>)}
+            {deal.pickupInspection.conditionNotes.map((n) => (
+              <li key={n} className="text-ink-500">Existing: {n}</li>
+            ))}
           </ul>
-        </div>
+        </section>
       )}
-      {listing.mode === "rental" && deal.status === "active" && role === "seller" &&
-        scanner("At return: scan the item back in", "Same angles as pickup, with every accessory laid out.", "return", "Compare with pickup")}
+      {listing.mode === "rental" &&
+        deal.status === "active" &&
+        role === "seller" &&
+        scanner("Scan it back in", "Same angles as pickup, with every accessory laid out.", "return", "Compare with pickup")}
       {listing.mode === "rental" && deal.status === "returned" && role === "seller" && decision?.kind === "rental_return" && (
-        <button className="btn-primary" disabled={!!busy} onClick={() => act("settle", "settle")}>
+        <button className="btn-primary py-4 text-base" disabled={!!busy} onClick={() => act("settle", "settle")}>
           {busy === "settle"
             ? "Settling with PayPal…"
             : decision.totalCents > 0
-              ? `Charge ${formatMoney(decision.totalCents)} · release ${formatMoney(decision.releasedCents)}`
+              ? `Keep ${formatMoney(decision.totalCents)} · release ${formatMoney(decision.releasedCents)}`
               : `Release the full ${formatMoney(listing.depositCents)} deposit`}
         </button>
       )}
 
       {(deal.status === "released" || deal.status === "settled") && (
-        <div className="card space-y-3 text-center">
-          <p className="text-lg font-semibold">Done. Nobody had to trust anybody.</p>
+        <section className="space-y-3 rounded-[10px] border border-line bg-card p-5 text-center">
+          <p className="font-serif text-2xl">Nobody had to trust anybody.</p>
           <p className="text-sm text-ink-500">
-            {role === "seller"
-              ? "Share your proof. It's how buyers know you're the real deal next time."
-              : "Share the proof, or use Clasp for your next deal."}
+            {role === "seller" ? "Share your proof. It's how the next buyer knows you're the real deal." : "Share the proof, or use Clasp for your next deal."}
           </p>
           <ShareProof dealId={id} title={listing.title} />
           <Link href="/new" className="btn-secondary">Sell or rent something with Clasp</Link>
-        </div>
+        </section>
       )}
 
       {role && deal.capturedCents > 0 && (
-        <div className="card space-y-2 text-sm">
-          <h2 className="font-semibold">Your record</h2>
-          <p className="text-ink-500">
-            Photos, match results and the PayPal timeline in one PDF. If the buyer ever opens a PayPal dispute, Clasp sends it to PayPal automatically.
-          </p>
+        <section className="space-y-2">
           <a className="btn-secondary" href={`/api/deals/${id}/record?k=${encodeURIComponent(key ?? "")}`} target="_blank" rel="noreferrer">
-            Download handoff record (PDF)
+            Download the handoff record (PDF)
           </a>
           {role === "seller" && (
             <button className="btn-secondary" disabled={!!busy} onClick={() => act("defend", "defend")}>
-              {busy === "defend" ? "Checking PayPal for disputes…" : "Check for disputes and send record to PayPal"}
+              {busy === "defend" ? "Checking PayPal for disputes…" : "Check for disputes and send the record"}
             </button>
           )}
-        </div>
+          <p className="text-xs text-ink-500">If the buyer ever opens a PayPal dispute, Clasp sends this record to PayPal automatically.</p>
+        </section>
       )}
 
       {role && key && !["released", "settled", "voided"].includes(deal.status) && (
-        <NotifyButton subscriptionKey={key} dealId={id} label={listing.mode === "rental" && role === "buyer" ? "Notify me when my deposit is back" : "Notify me about this deal"} />
+        <NotifyButton
+          subscriptionKey={key}
+          dealId={id}
+          label={listing.mode === "rental" && role === "buyer" ? "Notify me when my deposit is back" : "Notify me about this deal"}
+        />
       )}
 
-      {notice && <p className="text-sm text-ok-600">{notice}</p>}
-      {error && <p className="text-sm text-bad-600">{error}</p>}
+      {notice && <p className="text-sm text-matched">{notice}</p>}
+      {error && <p className="rounded-[10px] border border-oxblood/25 bg-oxblood-tint px-4 py-3 text-sm text-oxblood">{error}</p>}
 
-      <div className="card">
-        <h2 className="text-sm font-semibold">Timeline</h2>
-        <ol className="mt-2 space-y-2 text-sm">
-          {state.events.map((e, i) => (
-            <li key={i} className="flex justify-between gap-3">
-              <span className={e.type.startsWith("webhook.") ? "text-clasp-600" : ""}>{eventLabel(e)}</span>
-              <time className="shrink-0 text-ink-500">{new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
-            </li>
-          ))}
+      {/* activity: one quiet line per event, Linear-style */}
+      <section>
+        <p className="status text-ink-500">Activity</p>
+        <ol className="relative mt-3 space-y-3 border-l border-line pl-5">
+          {state.events.map((e, i) => {
+            const fromPayPal = e.type.startsWith("webhook.");
+            const isMoney = e.type.startsWith("paypal.") || fromPayPal;
+            return (
+              <li key={i} className="relative text-sm">
+                <span
+                  className={`absolute -left-[24.5px] top-1.5 h-2 w-2 rounded-full ring-4 ring-paper ${
+                    e.type.includes("mismatch") ? "bg-oxblood" : fromPayPal ? "bg-matched" : isMoney ? "bg-brass" : "bg-ink-300"
+                  }`}
+                />
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className={isMoney ? "text-ink-900" : "text-ink-700"}>{eventLabel(e)}</span>
+                  <time className="shrink-0 text-xs text-ink-500" dateTime={e.at}>
+                    {ago(e.at)}
+                  </time>
+                </div>
+              </li>
+            );
+          })}
         </ol>
-      </div>
+      </section>
     </div>
   );
+}
+
+function ago(iso: string): string {
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return "just now";
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
 }

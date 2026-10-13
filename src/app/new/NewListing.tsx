@@ -120,7 +120,7 @@ export function NewListing({ initialMode }: { initialMode: Mode }) {
   if (created && verdict?.verified) {
     const link = `${window.location.origin}/l/${created.id}`;
     return (
-      <div className="space-y-4 pt-4">
+      <div className="mx-auto max-w-xl px-4 pt-6 space-y-4">
         <div className="card border-ok-600/30 bg-ok-50">
           <p className="text-sm font-medium text-ok-600">Possession verified</p>
           <h1 className="mt-1 text-2xl font-semibold">Your Clasp link is live</h1>
@@ -139,7 +139,7 @@ export function NewListing({ initialMode }: { initialMode: Mode }) {
 
   if (created) {
     return (
-      <div className="space-y-4 pt-4">
+      <div className="mx-auto max-w-xl px-4 pt-6 space-y-4">
         <div className="card text-center">
           <p className="text-sm text-ink-500">Write this code on paper</p>
           <p className="my-3 font-mono text-6xl font-bold tracking-[0.3em]">{created.possessionCode}</p>
@@ -169,7 +169,7 @@ export function NewListing({ initialMode }: { initialMode: Mode }) {
   }
 
   return (
-    <form onSubmit={create} className="space-y-4 pt-4">
+    <form onSubmit={create} className="mx-auto max-w-xl px-4 pt-6 space-y-4">
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-ink-100 p-1">
         {(["sale", "rental"] as const).map((m) => (
           <button
