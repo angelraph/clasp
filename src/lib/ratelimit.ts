@@ -2,13 +2,20 @@
  * Caps on expensive actions. Each photo check is a paid AI call and each order is a
  * PayPal API call, so anonymous traffic can't run up costs or spam holds.
  */
+import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { getDb, schema } from "./db";
 import { HttpError } from "./store";
 
+/**
+ * A stable, non-reversible tag for the caller's IP. Rate limits only need to tell callers
+ * apart, so the raw address is never stored.
+ */
 export function clientIp(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");
-  return (forwarded?.split(",")[0] ?? req.headers.get("x-real-ip") ?? "unknown").trim();
+  const ip = (forwarded?.split(",")[0] ?? req.headers.get("x-real-ip") ?? "unknown").trim();
+  const salt = process.env.PAYPAL_CLIENT_SECRET ?? "clasp";
+  return createHash("sha256").update(`${salt}:${ip}`).digest("base64url").slice(0, 16);
 }
 
 /** Atomically counts one hit in a fixed window; throws 429 once over the limit. */

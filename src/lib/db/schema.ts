@@ -92,6 +92,17 @@ export const photos = pgTable("photos", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Support requests from the help center, optionally tied to a deal. */
+export const supportTickets = pgTable("support_tickets", {
+  id: text("id").primaryKey(),
+  topic: text("topic").notNull(),
+  email: text("email").notNull(),
+  dealId: text("deal_id"),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("open"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** Fixed-window counters that cap expensive actions (AI calls, PayPal orders) per caller. */
 export const rateLimits = pgTable("rate_limits", {
   key: text("key").primaryKey(),

@@ -127,6 +127,94 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Long-form pages (docs, policies): readable measure, quiet hierarchy. */
+.prose-clasp {
+  color: var(--color-ink-700);
+  line-height: 1.7;
+}
+.prose-clasp > * + * {
+  margin-top: 1rem;
+}
+.prose-clasp h2 {
+  margin-top: 2.75rem;
+  scroll-margin-top: 5rem;
+  color: var(--color-ink-900);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.prose-clasp h3 {
+  margin-top: 1.75rem;
+  scroll-margin-top: 5rem;
+  color: var(--color-ink-900);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.prose-clasp a {
+  color: var(--color-brass-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.prose-clasp strong {
+  color: var(--color-ink-900);
+  font-weight: 600;
+}
+.prose-clasp ul,
+.prose-clasp ol {
+  padding-left: 1.25rem;
+}
+.prose-clasp ul {
+  list-style: disc;
+}
+.prose-clasp ol {
+  list-style: decimal;
+}
+.prose-clasp li + li {
+  margin-top: 0.35rem;
+}
+.prose-clasp code {
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: var(--color-card);
+  padding: 0.1rem 0.35rem;
+  font-family: var(--font-geist-mono);
+  font-size: 0.85em;
+  color: var(--color-ink-900);
+}
+.prose-clasp pre {
+  overflow-x: auto;
+  border-radius: 10px;
+  background: var(--color-ink-900);
+  padding: 1rem;
+  font-family: var(--font-geist-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--color-paper);
+}
+.prose-clasp pre code {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+.prose-clasp table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.prose-clasp th,
+.prose-clasp td {
+  border-bottom: 1px solid var(--color-line);
+  padding: 0.6rem 0.5rem 0.6rem 0;
+  text-align: left;
+  vertical-align: top;
+}
+.prose-clasp th {
+  color: var(--color-ink-900);
+  font-weight: 600;
+}
+
 /* Scroll-reveal: elements fade up once when they enter the viewport. */
 .reveal {
   opacity: 0;

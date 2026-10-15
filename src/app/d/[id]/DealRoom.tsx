@@ -64,6 +64,7 @@ function eventLabel(e: State["events"][number]): string {
     "rental.return_charge": "Return scan: agreed charges found",
     "deal.released": "Deal complete",
     "deal.settled": "Rental settled",
+    "support.ticket_opened": `Support ticket ${p.ticket ?? ""} opened`,
   };
   const webhook: Record<string, string> = {
     "CHECKOUT.ORDER.APPROVED": "buyer approved the payment",

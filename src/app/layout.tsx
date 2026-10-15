@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { MobileMenu } from "@/components/MobileMenu";
 import { env } from "@/lib/env";
 import "./globals.css";
 
@@ -33,12 +34,15 @@ const footer = [
     links: [
       ["How it works", "/#how"],
       ["Trust & safety", "/trust"],
+      ["Help center", "/support"],
       ["FAQ", "/faq"],
     ],
   },
   {
-    title: "Legal",
+    title: "Company",
     links: [
+      ["About", "/about"],
+      ["Docs", "/docs"],
       ["Privacy", "/privacy"],
       ["Terms", "/terms"],
       ["Source code", "https://github.com/angelraph/clasp"],
@@ -56,12 +60,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <Logo size={26} />
             </Link>
             <nav className="flex items-center gap-1 text-sm">
-              <Link href="/browse" className="rounded-md px-2.5 py-1.5 text-ink-700 hover:text-ink-900">Browse</Link>
-              <Link href="/faq" className="hidden rounded-md px-2.5 py-1.5 text-ink-700 hover:text-ink-900 sm:inline">FAQ</Link>
+              <Link href="/browse" className="hidden rounded-md px-2.5 py-1.5 text-ink-700 hover:text-ink-900 sm:inline">Browse</Link>
+              <Link href="/support" className="hidden rounded-md px-2.5 py-1.5 text-ink-700 hover:text-ink-900 sm:inline">Help</Link>
+              <Link href="/docs" className="hidden rounded-md px-2.5 py-1.5 text-ink-700 hover:text-ink-900 md:inline">Docs</Link>
               <Link href="/agents" className="hidden rounded-md px-2.5 py-1.5 text-ink-700 hover:text-ink-900 sm:inline">Agents</Link>
               <Link href="/new" className="ml-1 rounded-[10px] bg-ink-900 px-3 py-1.5 font-medium text-paper hover:bg-ink-700">
                 Sell or rent
               </Link>
+              <MobileMenu />
             </nav>
           </div>
         </header>
