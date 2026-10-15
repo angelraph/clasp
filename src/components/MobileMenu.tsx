@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 const LINKS: [string, string][] = [
   ["Browse listings", "/browse"],
@@ -42,8 +43,9 @@ export function MobileMenu() {
           <span className={`absolute left-0 h-px w-4 bg-ink-900 transition-all ${open ? "top-1.5 -rotate-45" : "top-3"}`} />
         </span>
       </button>
-      {open && (
-        <nav className="fixed inset-x-0 bottom-0 top-14 z-40 overflow-y-auto border-t border-line bg-paper px-4 py-4">
+      {/* Portaled to <body>: the header's backdrop blur would otherwise trap a fixed sheet inside it. */}
+      {open && createPortal(
+        <nav className="fixed inset-x-0 bottom-0 top-14 z-40 overflow-y-auto border-t border-line bg-paper px-4 py-4 sm:hidden">
           <ul className="divide-y divide-line">
             {LINKS.map(([label, href]) => (
               <li key={href}>
@@ -54,7 +56,8 @@ export function MobileMenu() {
               </li>
             ))}
           </ul>
-        </nav>
+        </nav>,
+        document.body,
       )}
     </div>
   );
