@@ -5,6 +5,7 @@ import type { Deal, Listing } from "./db/schema";
 import { env } from "./env";
 import { protectionFeeCents } from "./money";
 import * as paypal from "./paypal";
+import { redactPhoto } from "./redact";
 import type { Photo } from "./vision";
 
 export const newId = customAlphabet("23456789abcdefghjkmnpqrstuvwxyz", 12);
@@ -105,18 +106,30 @@ export async function savePhotos(
   for (const file of files) {
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new HttpError(400, `Unsupported image type ${file.type}`);
     if (file.size > 4 * 1024 * 1024) throw new HttpError(400, "Each photo must be under 4 MB");
-    const data = new Uint8Array(await file.arrayBuffer());
+  }
+
+  // Other people's personal information is pixelated before anything is stored; the
+  // original never touches the database. If the check fails, nothing is saved.
+  let cleaned: { data: Uint8Array; mime: string }[];
+  try {
+    cleaned = await Promise.all(files.map(async (f) => redactPhoto(new Uint8Array(await f.arrayBuffer()), f.type)));
+  } catch (err) {
+    console.error("Privacy check failed", err);
+    throw new HttpError(503, "Couldn't run the privacy check on your photos, so nothing was saved. Please try again.");
+  }
+
+  for (const photo of cleaned) {
     const id = newId();
     await db.insert(schema.photos).values({
       id,
       listingId: ctx.listingId,
       dealId: ctx.dealId ?? null,
       stage: ctx.stage,
-      mime: file.type,
-      data,
+      mime: photo.mime,
+      data: photo.data,
     });
     ids.push(id);
-    photos.push({ mime: file.type, data });
+    photos.push(photo);
   }
   return { ids, photos };
 }

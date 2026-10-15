@@ -64,12 +64,14 @@ export async function pixelate(data: Uint8Array, regions: Region[]): Promise<Uin
     const width = Math.min(W - left, Math.ceil(r.width * W + 2 * padX));
     const height = Math.min(H - top, Math.ceil(r.height * H + 2 * padY));
     if (width < 4 || height < 4) continue;
-    const block = Math.max(8, Math.round(Math.min(width, height) / 6));
-    const tile = await sharp(oriented)
+    const block = Math.max(10, Math.round(Math.min(width, height) / 5));
+    // Two separate pipelines: sharp applies only the last resize() of a pipeline, so
+    // shrinking and enlarging in one chain would return the region unchanged.
+    const small = await sharp(oriented)
       .extract({ left, top, width, height })
       .resize(Math.max(1, Math.round(width / block)), Math.max(1, Math.round(height / block)), { kernel: "nearest" })
-      .resize(width, height, { kernel: "nearest" })
       .toBuffer();
+    const tile = await sharp(small).resize(width, height, { kernel: "nearest" }).blur(2).toBuffer();
     overlays.push({ input: tile, left, top });
   }
   const out = await sharp(oriented).composite(overlays).jpeg({ quality: 86 }).toBuffer();
